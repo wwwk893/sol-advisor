@@ -1,6 +1,6 @@
 {
   "name": "sol-advisor",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Codex-native architect workflow routed by default for every request, with direct primary-only simple lanes, native Luna V2 delegation for engineering work, and explicit app-task or Terra/Sol compatibility lanes.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/wwwk893/sol-advisor#readme",

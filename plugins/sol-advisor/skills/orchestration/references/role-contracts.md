@@ -53,6 +53,20 @@ parent may explicitly assign a bounded repair/test-only change with exact owners
 otherwise return a blocker. Disposable fixtures remain inside an explicitly scoped
 temporary area.
 
+When the user explicitly requests UT/browser validation against a repository-declared
+non-production environment, the tester owns the same browser session end to end:
+login, visible CAPTCHA, accessible test OTP, UT execution, and evidence capture. The
+primary must not take over merely because authentication is required. Authentication
+is bounded to the repository-declared test credential source, and only after the
+primary records the target as non-production and keeps authorization in scope. Never
+expose credential values or inspect stored browser passwords, cookies, local storage,
+or session storage.
+
+Use `blocked-auth` only for production/unknown targets, missing or rejected
+credentials, user-controlled MFA/biometric/physical presence, account-lockout risk,
+or a supported authentication attempt that remains blocked. An authentication
+requirement alone is not a blocker.
+
 ### `reviewer`
 
 Use only for a high-risk boundary or an explicit user request for independent review.
@@ -88,11 +102,21 @@ Preserve unrelated edits and adapt to concurrent changes.
 INTERFACES
 - <Signatures, schemas, commands, routes, or compatibility behavior.>
 
+TEST AUTHORIZATION (tester/browser tasks only)
+- Target/environment class: <non-production | production | unknown | not applicable>
+- Credential source: <repository-declared test credential source | not applicable>
+- Allowed auth actions: <login, visible CAPTCHA, accessible test OTP | not applicable>
+- External test-data mutation scope: <explicitly authorized scope | none | not applicable>
+- Escalation conditions: <blocked-auth conditions above | not applicable>
+For other roles, mark this section `not applicable`.
+
 CONSTRAINTS
 - <Architecture, safety boundary, excluded scope, and settled decisions.>
 - Do not commit, push, deploy, delete, upload, mutate external services, or handle
   secrets unless the user explicitly authorizes that action and the primary keeps it
   in scope.
+- Do not implicitly authorize unrelated external test-data mutations, Jira operations,
+  commit, push, deploy, upload, or other external actions.
 
 VERIFICATION
 - Run: <focused command> -> <concrete success evidence>
