@@ -1,0 +1,46 @@
+{
+  "recommended_threshold": 0.20,
+  "positive_concepts": {
+    "default_activation": {
+      "weight": 1.0,
+      "phrases": [
+        "request", "task", "question", "answer", "status", "work", "use", "only",
+        "what", "explain", "run", "do", "please", "tell", "have", "let", "ask",
+        "send", "delegate", "choose", "select", "route", "primary", "worker",
+        "tester", "reviewer", "explorer", "luna", "app-task", "terra-sol",
+        "compatibility", "native", "implementation", "implement", "test", "review",
+        "audit", "document", "documentation", "summarize", "summary", "future",
+        "outline", "role", "write", "check", "available", "availability", "service",
+        "config", "changes", "simple", "plain", "one-off", "read-only", "quoted",
+        "word", "phrase", "can", "the", "a", "is", "i", "why", "whether",
+        "sol advisor", "orchestration", "installation", "install", "commit", "push",
+        "subagents", "files", "nothing", "hello", "hi", "help", "translate",
+        "translation", "capital", "france", "change", "edit", "button", "file",
+        "source", "2+2", "你好", "您好", "帮助", "翻译", "首都", "法国", "修改",
+        "改成", "文件", "按钮", "保存", "提交", "早上好", "英文", "中文", "只", "请", "用", "让", "运行", "解释",
+        "原生", "子代理", "主代理", "主线程", "测试", "审查", "修复", "处理",
+        "选择", "走", "兼容", "状态", "说明", "告诉", "记录", "引用", "不要",
+        "不用", "不", "仅", "只读", "可用", "这个", "功能", "执行", "实现"
+      ]
+    }
+  },
+  "negative_concepts": {
+    "explicit_route_opt_out": {
+      "weight": 0.95,
+      "exclusive": true,
+      "phrases": [
+        "do not use sol advisor", "do not use orchestration",
+        "don't use sol advisor", "don't use orchestration",
+        "without sol advisor", "without orchestration",
+        "skip sol advisor", "skip orchestration",
+        "not use sol advisor", "not use orchestration",
+        "不要使用 sol advisor", "不要使用 orchestration",
+        "不要用 sol advisor", "不要用 orchestration",
+        "不使用 sol advisor", "不使用 orchestration",
+        "不要走 orchestration", "不走 orchestration",
+        "跳过 sol advisor", "跳过 orchestration"
+      ]
+    }
+  },
+  "fallback_positive_concepts": ["default_activation"]
+}
