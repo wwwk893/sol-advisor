@@ -31,7 +31,8 @@ Choose the smallest role: explorers for questions, worker for settled implementa
 tester for focused runtime evidence, and reviewer only for a high-risk boundary or an
 explicit user request. A tester does not change product code by default; the parent may
 assign a bounded repair/test-only change with exact ownership; otherwise return a blocker.
-A small or tightly coupled change may stay in the primary session.
+A small or tightly coupled change may stay in the primary session. Browser/runtime QA still
+routes to the tester unless the user explicitly asks the primary to perform it.
 
 Build a compact packet from
 [role-contracts.md](role-contracts.md). State `fork_turns: none`, exact owned files,
@@ -74,7 +75,9 @@ waiting may be longer when the child is making progress.
 
 Read the handoff, then inspect the actual worktree, complete diff, changed-file scope,
 and relevant generated/runtime artifacts in the primary session. Treat child claims as
-untrusted until the primary reproduces the evidence.
+untrusted until the primary verifies the actual artifacts. For tester-owned browser/runtime
+QA, inspect the evidence and send gaps back to the same tester instead of reproducing the
+browser session.
 
 ### CORRECT
 
@@ -86,11 +89,12 @@ child merely to dodge an unresolved correction.
 
 ### VALIDATE
 
-Rerun the narrowest decisive acceptance subset in the primary session and inspect
-behavior, not only exit status. Expand validation only when risk or impact warrants it;
-do not unconditionally repeat every child check. Confirm no out-of-scope file changed,
-no unrelated user edit was reverted, and no forbidden external mutation or secret
-handling occurred.
+Rerun the narrowest decisive acceptance subset in the primary session with local, non-browser checks
+and inspect behavior, not only exit status; browser/runtime QA remains
+with the same tester end to end unless the user explicitly asks the primary to perform it.
+Expand validation only when risk or impact warrants it; do not unconditionally repeat every
+child check. Confirm no out-of-scope file changed, no unrelated user edit was reverted, and
+no forbidden external mutation or secret handling occurred.
 
 ### REVIEW (optional)
 
@@ -114,5 +118,6 @@ when no conflict evidence exists, not automatic stops for ordinary work.
 Children preserve concurrent edits and remain within the packet. They may not commit,
 push, deploy, delete, upload, mutate external services, or process keys/tokens/cookies
 unless the user explicitly authorizes that action and the primary keeps the action in
-scope. The primary performs or verifies any authorized external mutation. A child
-reporting failure is followed up in place rather than silently rerouted.
+scope. The primary performs authorized external mutations assigned to the primary and
+verifies tester-owned authorized runtime actions through evidence. A child reporting
+failure is followed up in place rather than silently rerouted.

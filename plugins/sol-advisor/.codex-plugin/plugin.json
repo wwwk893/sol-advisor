@@ -1,6 +1,6 @@
 {
   "name": "sol-advisor",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Codex-native architect workflow routed by default for every request, with direct primary-only simple lanes, native Luna V2 delegation for engineering work, and explicit app-task or Terra/Sol compatibility lanes.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/wwwk893/sol-advisor#readme",
@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "Sol Advisor",
     "shortDescription": "Default routing for every request; direct primary-only simple lanes and native Luna V2 delegation for engineering work.",
-    "longDescription": "Sol Advisor routes every new request by default while keeping simple, status-only, install-only, commit/push-only, and no-subagent work in a direct primary-only path. Engineering work that benefits from delegation uses native V2 roles through gpt-5.6-luna at max effort; architecture, verification, and acceptance remain in the primary session. App-task Luna and legacy Terra/Sol are explicit compatibility options, and an explicit request not to use Sol Advisor or orchestration opts out.",
+    "longDescription": "Sol Advisor routes every new request by default while keeping simple, status-only, install-only, commit/push-only, and no-subagent work in a direct primary-only path. Engineering work that benefits from delegation uses native V2 roles through gpt-5.6-luna at max effort; the primary owns architecture and local acceptance while tester-owned browser/runtime QA stays delegated end to end. App-task Luna and legacy Terra/Sol are explicit compatibility options, and an explicit request not to use Sol Advisor or orchestration opts out.",
     "developerName": "wwwk893 (maintainer; original author Daniel McAteer)",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],

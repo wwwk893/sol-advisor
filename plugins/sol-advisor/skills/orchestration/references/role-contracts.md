@@ -53,14 +53,14 @@ parent may explicitly assign a bounded repair/test-only change with exact owners
 otherwise return a blocker. Disposable fixtures remain inside an explicitly scoped
 temporary area.
 
-When the user explicitly requests UT/browser validation against a repository-declared
-non-production environment, the tester owns the same browser session end to end:
-login, visible CAPTCHA, accessible test OTP, UT execution, and evidence capture. The
-primary must not take over merely because authentication is required. Authentication
-is bounded to the repository-declared test credential source, and only after the
-primary records the target as non-production and keeps authorization in scope. Never
-expose credential values or inspect stored browser passwords, cookies, local storage,
-or session storage.
+When UT/browser validation is in scope through the user request or repository instructions
+against a repository-declared non-production environment, the tester owns the same browser session
+end to end: login, visible CAPTCHA, accessible test OTP, UT execution, and evidence capture.
+The primary validates the task packet and evidence, then sends any gap back to the same tester.
+It does not repeat or take over browser/runtime QA unless the user explicitly asks the primary
+to perform it. Authentication is bounded to the repository-declared test credential source,
+and only after the primary records the target as non-production and keeps authorization in
+scope. Never expose credential values or inspect stored browser passwords, cookies, local storage, or session storage.
 
 Use `blocked-auth` only for production/unknown targets, missing or rejected
 credentials, user-controlled MFA/biometric/physical presence, account-lockout risk,
@@ -170,8 +170,11 @@ stops that review and requires a fresh verdict.
 ## Primary acceptance
 
 The primary uses `list_agents`/`wait_agent`, spot-checks the actual worktree and complete
-diff, confirms ownership, and reruns the narrowest decisive acceptance subset. Expand
-validation only when risk or impact warrants it; a report is not acceptance evidence.
-Independent read-only roles may run concurrently; a shared worktree has one writer,
-and no child may commit, push, deploy, delete, upload, or handle secrets without
-explicit authorization.
+diff, confirms ownership, and reruns the narrowest decisive acceptance subset with local, non-browser checks.
+Browser/runtime QA stays with the same tester end to end; the primary
+inspects its evidence and follows up on gaps instead of repeating the browser session unless
+the user explicitly asks the primary to perform it. Expand validation only when risk or impact warrants
+it; a report without inspectable evidence is not acceptance evidence.
+Independent read-only roles may run concurrently; a shared worktree has one writer, and no
+child may commit, push, deploy, delete, upload, or handle secrets without explicit
+authorization.

@@ -4,8 +4,10 @@ Sol Advisor is a small Codex orchestration skill. After installation it is the
 default route for every new user request. Activation does not force a child: simple
 answers, status-only, install-only, commit/push-only, and no-subagent requests stay
 primary-only, while engineering work that benefits from delegation uses the native
-multi-agent V2 runtime. The primary session owns requirements, architecture,
-spot-checks, and acceptance, while runtime-configured Luna agents handle bounded work.
+multi-agent V2 runtime. The primary session owns requirements, architecture, spot-checks,
+and acceptance coordination, while runtime-configured Luna agents handle bounded work.
+Browser/runtime QA stays with the same tester end to end unless the user explicitly asks
+the primary to perform it.
 The only route opt-out is an explicit request not to use Sol Advisor or orchestration
 for the current task.
 
@@ -56,9 +58,11 @@ interfaces, constraints, verification, and a structured return. Children must pr
 unrelated edits and may not commit, push, deploy, delete, upload, or handle secrets
 unless the user explicitly authorizes that action and the primary keeps it in scope.
 When a child fails, correct the specification and follow up with that same child. The
-primary spot-checks the actual diff and reruns the narrowest decisive acceptance subset;
-it expands validation only when risk or impact warrants it. Lightweight or tightly
-coupled changes may be implemented directly in the primary session.
+primary spot-checks the actual diff and reruns the narrowest decisive acceptance subset
+with local, non-browser checks. It inspects tester evidence and sends gaps back to the same
+tester instead of repeating browser/runtime QA. It expands validation only when risk or
+impact warrants it. Lightweight or tightly coupled changes may be implemented directly in
+the primary session.
 
 The native lane does not require app-task tools, a nested Codex CLI, or an installed
 companion role. Do not install or remove roles automatically.
@@ -98,7 +102,8 @@ codex plugin add sol-advisor@sol-advisor
 After installation, start a new task so the native V2 role catalog is current. Then
 invoke `$sol-advisor:orchestration` or describe the work normally; the skill routes the
 request by default. It preflights the native runtime, spawns only the selected role
-when delegation adds value, monitors it, and keeps acceptance in the primary session.
+when delegation adds value, monitors it, and keeps acceptance coordination in the primary
+session while the same tester owns browser/runtime QA.
 
 For a hosted update, run:
 

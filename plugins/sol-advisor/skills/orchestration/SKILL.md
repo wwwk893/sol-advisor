@@ -5,7 +5,7 @@ description: "Use by default for every new user request: answers, status, instal
 
 # Sol Advisor Orchestration
 
-Own requirements, architecture, integration, spot-checks, and acceptance. Load
+Own intent, integration, and acceptance coordination. Load
 [role-contracts.md](references/role-contracts.md), [native-v2-lane.md](references/native-v2-lane.md),
 or explicit compatibility [luna-task-lane.md](references/luna-task-lane.md) on demand.
 
@@ -41,7 +41,7 @@ mutate external services, or handle secrets unless explicitly authorized in scop
 
 ## Acceptance and output
 
-The primary spot-checks worktree, ownership, and diff, then reruns the narrowest decisive acceptance subset.
-Expand validation only when risk or impact warrants it;
-stop on a hard boundary or routing conflict. Return `STATUS` (`complete|partial|blocked`),
-changed files, decisive evidence, judgment calls, gaps, and residual risk.
+The primary inspects ownership and diff, then reruns the narrowest decisive acceptance subset
+with local, non-browser checks; browser/runtime QA stays with the same tester. The primary
+enters the browser only on explicit user request. Expand only when risk or impact warrants it.
+Return `STATUS` (`complete|partial|blocked`), evidence, gaps, and residual risk.

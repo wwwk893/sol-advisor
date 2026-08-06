@@ -1,5 +1,5 @@
 #!/bin/sh
-# Repository-local verification for Sol Advisor 0.6.1.
+# Repository-local verification for Sol Advisor 0.6.2.
 
 set -eu
 
@@ -57,8 +57,8 @@ manifest_path, *paths = sys.argv[1:]
 doc_paths = paths[:6]
 interface_path, skill_manifest_path, trigger_cases_path, semantic_config_path = paths[6:]
 manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-if manifest.get("version") != "0.6.1":
-    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.1")
+if manifest.get("version") != "0.6.2":
+    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.2")
 prompts = manifest.get("interface", {}).get("defaultPrompt")
 if not isinstance(prompts, list) or not prompts or not all(isinstance(p, str) and p.strip() for p in prompts):
     raise SystemExit("manifest defaultPrompt must be a non-empty list of strings")
@@ -94,9 +94,9 @@ for key, value in (
 if "openai:" not in interface_text or "Native V2" not in interface_text:
     raise SystemExit("interface.yaml missing native V2 openai degradation")
 for key, expected in (
-    ("version", "0.6.1"),
+    ("version", "0.6.2"),
     ("owner", "wwwk893"),
-    ("updated_at", "2026-08-05"),
+    ("updated_at", "2026-08-06"),
     ("lifecycle_stage", "production"),
     ("context_budget_tier", "production"),
     ("review_cadence", "runtime/routing changes"),
@@ -181,6 +181,9 @@ if missing_tester_auth_tokens:
 for token in ("narrowest decisive acceptance subset", "risk or impact warrants"):
     if token not in skill or token not in contracts or token not in native:
         raise SystemExit(f"acceptance subset contract is missing {token!r}")
+for token in ("local, non-browser checks", "browser/runtime QA", "same tester"):
+    if not all(token in document for document in (skill, contracts, native, readme)):
+        raise SystemExit(f"tester-owned browser acceptance contract is missing {token!r}")
 for token in ("does not require", "app-task", "compatibility", "Terra/Sol"):
     if not all(token.lower() in document.lower() for document in (skill, native, readme)):
         raise SystemExit(f"default/compatibility separation is missing {token!r}")
@@ -214,7 +217,7 @@ for requirement in ("python3", "GNU readlink", "POSIX sh", "jq", "shasum"):
         raise SystemExit(f"README missing installer/core requirement {requirement}")
 print("native V2/default and compatibility contracts are structurally present")
 PY
-pass "0.6.1 metadata, role inventory, native tools, and compatibility separation"
+pass "0.6.2 metadata, role inventory, native tools, and compatibility separation"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -488,4 +491,4 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$null_id" >/dev/n
 fi
 pass "runtime inspector rejects null sandbox, permission, and cwd metadata"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.1 native Luna V2 checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.2 native Luna V2 checks completed in $tmp_dir"
