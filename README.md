@@ -2,10 +2,12 @@
 
 Sol Advisor is a small Codex orchestration skill. After installation it is the
 default route for every new user request. Activation does not force a child: simple
-answers, status-only, install-only, commit/push-only, and no-subagent requests stay
-primary-only, while engineering work that benefits from delegation uses the native
-multi-agent V2 runtime. The primary session owns requirements, architecture, spot-checks,
-and acceptance coordination, while runtime-configured Luna agents handle bounded work.
+answers, status-only, install-only, and no-subagent requests stay primary-only. Authorized
+commit/push prefers reusing the implementation worker or starting one bounded worker with
+an exact-scope packet, reducing primary-context token use. Other engineering work that
+benefits from delegation uses the native multi-agent V2 runtime. The primary session owns
+requirements, architecture, spot-checks, and acceptance coordination, while
+runtime-configured Luna agents handle bounded work.
 Browser/runtime QA stays with the same tester end to end unless the user explicitly asks
 the primary to perform it.
 The only route opt-out is an explicit request not to use Sol Advisor or orchestration

@@ -1,7 +1,7 @@
 {
   "name": "sol-advisor",
   "version": "0.6.2",
-  "description": "Codex-native architect workflow routed by default for every request, with direct primary-only simple lanes, native Luna V2 delegation for engineering work, and explicit app-task or Terra/Sol compatibility lanes.",
+  "description": "Codex-native architect workflow with primary-only simple lanes, worker-preferred commit/push, native Luna V2 engineering delegation, and explicit compatibility lanes.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/wwwk893/sol-advisor#readme",
   "repository": "https://github.com/wwwk893/sol-advisor",
@@ -10,12 +10,12 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sol Advisor",
-    "shortDescription": "Default routing for every request; direct primary-only simple lanes and native Luna V2 delegation for engineering work.",
-    "longDescription": "Sol Advisor routes every new request by default while keeping simple, status-only, install-only, commit/push-only, and no-subagent work in a direct primary-only path. Engineering work that benefits from delegation uses native V2 roles through gpt-5.6-luna at max effort; the primary owns architecture and local acceptance while tester-owned browser/runtime QA stays delegated end to end. App-task Luna and legacy Terra/Sol are explicit compatibility options, and an explicit request not to use Sol Advisor or orchestration opts out.",
+    "shortDescription": "Default routing with primary-only simple lanes, worker-preferred commit/push, and native Luna V2 engineering delegation.",
+    "longDescription": "Sol Advisor routes every new request by default while keeping simple, status-only, install-only, and no-subagent work primary-only. Authorized commit/push prefers a compact native worker route that reuses the implementation worker when available, reducing primary-context token use while preserving exact scope and non-force push. Other engineering work that benefits from delegation uses native V2 roles through gpt-5.6-luna at max effort; the primary owns architecture and acceptance. App-task Luna and legacy Terra/Sol remain explicit compatibility options.",
     "developerName": "wwwk893 (maintainer; original author Daniel McAteer)",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "websiteURL": "https://github.com/wwwk893/sol-advisor",
-    "defaultPrompt": ["Route every request through Sol Advisor; keep simple lanes primary-only and delegate engineering to native Luna V2.", "Use app-task Luna or legacy Terra/Sol only when I explicitly authorize compatibility."]
+    "defaultPrompt": ["Route through Sol Advisor; prefer a scoped worker for authorized commit/push and native Luna V2 engineering.", "Use app-task Luna or legacy Terra/Sol only when I explicitly authorize compatibility."]
   }
 }

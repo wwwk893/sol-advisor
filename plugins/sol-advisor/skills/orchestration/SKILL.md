@@ -1,6 +1,6 @@
 ---
 name: orchestration
-description: "Use by default for every new user request: answers, status, installation, commits/pushes, implementation, tests, review, audits, and routing. Keep simple, status-only, install-only, commit/push-only, and no-subagent requests in a direct primary-only path without spawning. Delegate engineering work through native V2 Luna Max with primary supervision. Compatibility lanes are explicit only. Opt out only when the user explicitly says not to use Sol Advisor or orchestration for this task."
+description: "Use by default for every new user request: answers, status, installation, commits/pushes, implementation, tests, review, audits, and routing. Keep simple, status-only, install-only, and no-subagent requests primary-only. Prefer a scoped native V2 worker for authorized commit/push to reduce primary-context token use, reusing the implementation worker when available. Delegate engineering work through native V2 Luna Max with primary supervision. Compatibility lanes are explicit only. Opt out only when the user explicitly says not to use Sol Advisor or orchestration for this task."
 ---
 
 # Sol Advisor Orchestration
@@ -13,7 +13,12 @@ or explicit compatibility [luna-task-lane.md](references/luna-task-lane.md) on d
 
 - **Default activation:** load this skill for every new request unless the user opts
   out of Sol Advisor/orchestration. Activation does not require a child: keep simple,
-  status-only, install-only, commit/push-only, and no-subagent requests primary-only.
+  status-only, install-only, and no-subagent requests primary-only.
+- **Commit/push preference:** when the current request authorizes commit/push, prefer
+  reusing the implementation `worker`; otherwise start one bounded `worker` with a compact
+  exact-scope packet. Use the primary only when the user requests no subagent or as a
+  disclosed safe fallback when delegation is unavailable and was not explicitly required.
+  Git authorization does not imply Jira, deploy, force-push, or broader file authority.
 - **Native V2 (default delegation):** delegate useful engineering work to
   `deep_explorer`, `explorer`, `worker`, `tester`, or risk-gated `reviewer` via native
   `spawn_agent`, `list_agents`, `wait_agent`, `followup_task`, `send_message`, and

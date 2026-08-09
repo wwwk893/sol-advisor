@@ -1,7 +1,7 @@
 interface:
   display_name: "Sol Advisor Orchestration"
-  short_description: "Default routing for every request; direct primary-only simple lanes and native Luna V2 engineering delegation"
-  default_prompt: "Route every request through $orchestration; keep simple lanes primary-only and engineering on native Luna V2."
+  short_description: "Default routing with worker-preferred commit/push and native Luna V2 engineering delegation"
+  default_prompt: "Route through $orchestration; prefer a scoped worker for authorized commit/push and native Luna V2 engineering."
 compatibility:
   canonical_format: "codex-plugin-skill"
   adapter_targets:
