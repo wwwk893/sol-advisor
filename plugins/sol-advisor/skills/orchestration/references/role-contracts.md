@@ -41,17 +41,24 @@ cleanup or speculative changes.
 ### `worker`
 
 Use for a settled implementation with an exact owned file set. It is the sole writer
-for those files in a shared worktree. It preserves unrelated edits, runs the requested
-focused checks, and reports actual changed files and evidence.
+for those files in a shared worktree and is the default product writer. It preserves unrelated
+edits, runs the requested focused checks, and reports actual changed files and evidence.
+
+When Git work is explicitly authorized, the native worker records the starting branch, base commit,
+and `git status` before editing; stages only explicitly authorized changed files (the exact owned file set);
+models commit and push as independent authorization flags (they may be granted together); never force-push
+or rewrite history. The primary verifies remote SHA, tree, and readback acceptance after any authorized push.
+Git permission does not imply Jira, deploy, or other external mutation.
 
 ### `tester`
 
 Use for focused tests, runtime reproduction, browser inspection, or failure
 classification. The requested sandbox may be broadened by the host (for example,
-`workspace-write`), but the default tester contract does not modify product code. A
-parent may explicitly assign a bounded repair/test-only change with exact ownership;
-otherwise return a blocker. Disposable fixtures remain inside an explicitly scoped
-temporary area.
+`workspace-write`), but the default tester contract does not modify product code. The worker is
+the default product writer; the only tester exception is a bounded repair/test-only exception with
+explicit repair authorization, exact file ownership, a failed relevant check, and no active worker
+writer, after which the tester is the sole writer for that owned set; otherwise return a blocker.
+Disposable fixtures remain inside an explicitly scoped temporary area.
 
 When UT/browser validation is in scope through the user request or repository instructions
 against a repository-declared non-production environment, the tester owns the same browser session
@@ -70,8 +77,16 @@ requirement alone is not a blocker.
 ### `reviewer`
 
 Use only for a high-risk boundary or an explicit user request for independent review.
-It is behaviorally read-only and returns one verdict: `ship`, `fix-first`, or
-`rethink`, with precise findings and residual risk. It must not implement its own fix.
+It is behaviorally read-only and uses the reviewer RETURN schema in the compact packet. It must
+not implement its own fix.
+
+## Writable-host observability for read-only roles
+
+`deep_explorer`, `explorer`, `reviewer`, and a read-only `tester` must capture actual model,
+effort, sandbox, and permission metadata supplied by the host, including a possible
+`danger-full-access` profile. Record and compare worktree state before and after the run; host
+metadata is not OS-enforced read-only isolation. If the worktree or any owned file mutates during
+a behaviorally read-only run, fail and invalidate that result, then report the mutation for a fresh run.
 
 ## Compact task packet
 
@@ -118,6 +133,11 @@ CONSTRAINTS
 - Do not implicitly authorize unrelated external test-data mutations, Jira operations,
   commit, push, deploy, upload, or other external actions.
 
+CORRECTION STATE
+correction_round: 0
+continuation_reason: none
+user_direction: none
+
 VERIFICATION
 - Run: <focused command> -> <concrete success evidence>
 - Inspect: <file, diff, fixture, or runtime output> -> <required evidence>
@@ -128,6 +148,15 @@ CHANGES: <actual file-by-file summary, or none>
 VERIFIED: <exact commands and output evidence>
 JUDGMENT CALLS: <decisions, or none>
 GAPS: <unfinished work or blockers, or none>
+
+REVIEWER RETURN (reviewer only)
+VERDICT: ship|fix-first|rethink
+REASON: <decisive reason>
+VALIDATED: <checks and evidence that passed, or none>
+UNVALIDATED: <checks not run or still unknown, or none>
+FINDINGS: <precise findings, or none>
+RECOMMENDATIONS: <required fixes or recommendations, or none>
+RESIDUAL RISK: <most important remaining risk, or none>
 ```
 
 The primary invokes the native tool explicitly:
@@ -145,27 +174,15 @@ These fields are intentional routing, not a silent fallback.
 
 For a failed or incomplete result, the primary names the exact evidence gap and sends a
 targeted `followup_task` (or `send_message`) to the same child. Do not create a
-replacement child merely to avoid correction. The normal budget is one execution plus
-at most two correction rounds. Continue when there is clear progress or the user asks
-for it; there is no hard short timeout. Each correction invalidates the previous
-acceptance claim, so the primary reruns inspection and validation.
+replacement child merely to avoid correction or reset the counter. The packet records
+machine-readable `correction_round: 0` for the initial execution and `1` or `2` for corrections.
+Beyond two requires a recorded `continuation_reason`; record `user_direction` as the quoted
+direction when present, otherwise `none`. Continue beyond two only for clear progress or explicit
+user direction; there is no hard short timeout. Each correction invalidates the previous acceptance
+claim, so the primary reruns inspection and validation.
 
-## Reviewer verdict and isolation
-
-The reviewer returns:
-
-```text
-VERDICT: ship | fix-first | rethink
-REASON: <decisive evidence-backed reason>
-FINDINGS: <precise paths and required fixes, or none>
-RESIDUAL RISK: <most important remaining risk, or none>
-```
-
-Observe the actual sandbox policy and permission profile supplied by the runtime. If a
-tester or reviewer requests read-only but the host reports a writable profile, report
-that residual risk and verify before/after state. Do not claim OS-enforced read-only
-isolation unless the runtime says so. Any mutation during an intended read-only review
-stops that review and requires a fresh verdict.
+The primary applies the writable-host observability rule above to every behaviorally read-only
+role, not only reviewers.
 
 ## Primary acceptance
 

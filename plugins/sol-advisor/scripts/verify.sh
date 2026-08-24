@@ -1,7 +1,11 @@
 #!/bin/sh
-# Repository-local verification for Sol Advisor 0.6.2.
+# Repository-local verification for Sol Advisor 0.6.3.
 
 set -eu
+
+LC_ALL=C
+LANG=C
+export LC_ALL LANG
 
 pass() { printf '%s\n' "PASS: $*"; }
 fail() { printf '%s\n' "FAIL: $*" >&2; exit 1; }
@@ -22,13 +26,19 @@ ui=$plugin_dir/skills/orchestration/agents/openai.yaml
 interface=$plugin_dir/skills/orchestration/agents/interface.yaml
 skill_manifest=$plugin_dir/skills/orchestration/manifest.json
 trigger_cases=$plugin_dir/skills/orchestration/evals/trigger_cases.json
+robustness_cases=$plugin_dir/skills/orchestration/evals/robustness_cases.json
 semantic_config=$plugin_dir/skills/orchestration/evals/semantic_config.json
 
 for required in "$installer" "$runtime_inspector" "$manifest" "$skill" "$contracts" \
-  "$native_contract" "$luna_contract" "$readme" "$ui" "$interface" \
-  "$skill_manifest" "$trigger_cases" "$semantic_config"; do
+  "$native_contract" "$luna_contract" "$ui" "$interface" "$skill_manifest" \
+  "$trigger_cases" "$robustness_cases" "$semantic_config"; do
   test -f "$required" || fail "required file missing: $required"
 done
+
+readme_arg=$readme
+if [ ! -f "$readme" ]; then
+  readme_arg=''
+fi
 
 tmp_base=${TMPDIR:-/tmp}
 case "$tmp_base" in /*) ;; *) tmp_base=/tmp ;; esac
@@ -47,18 +57,20 @@ tmp_dir=$(mktemp -d "$tmp_base/sol-advisor-verify.XXXXXX") || fail "could not cr
 jq empty "$manifest"
 jq empty "$skill_manifest"
 jq empty "$trigger_cases"
+jq empty "$robustness_cases"
 jq empty "$semantic_config"
-python3 - "$manifest" "$skill" "$contracts" "$native_contract" "$luna_contract" "$readme" "$ui" "$interface" "$skill_manifest" "$trigger_cases" "$semantic_config" <<'PY'
+python3 - "$manifest" "$skill" "$contracts" "$native_contract" "$luna_contract" "$readme_arg" "$ui" "$interface" "$skill_manifest" "$trigger_cases" "$robustness_cases" "$semantic_config" <<'PY'
 from pathlib import Path
 import json
+import re
 import sys
 
 manifest_path, *paths = sys.argv[1:]
 doc_paths = paths[:6]
-interface_path, skill_manifest_path, trigger_cases_path, semantic_config_path = paths[6:]
+interface_path, skill_manifest_path, trigger_cases_path, robustness_cases_path, semantic_config_path = paths[6:]
 manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-if manifest.get("version") != "0.6.2":
-    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.2")
+if manifest.get("version") != "0.6.3":
+    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.3")
 prompts = manifest.get("interface", {}).get("defaultPrompt")
 if not isinstance(prompts, list) or not prompts or not all(isinstance(p, str) and p.strip() for p in prompts):
     raise SystemExit("manifest defaultPrompt must be a non-empty list of strings")
@@ -73,12 +85,79 @@ for value, label in (
     if not all(token in value for token in ("native", "Luna")):
         raise SystemExit(f"{label} does not describe the native Luna lane")
 
-docs = {Path(path).name: Path(path).read_text(encoding="utf-8") for path in doc_paths}
-skill, contracts, native, luna, readme, ui = [docs[Path(path).name] for path in doc_paths]
+docs = {
+    (Path(path).name if path else "README.md"): (
+        Path(path).read_text(encoding="utf-8") if path else ""
+    )
+    for path in doc_paths
+}
+skill, contracts, native, luna, readme, ui = [
+    docs[Path(path).name if path else "README.md"] for path in doc_paths
+]
 interface_text = Path(interface_path).read_text(encoding="utf-8")
 skill_manifest = json.loads(Path(skill_manifest_path).read_text(encoding="utf-8"))
 trigger_cases = json.loads(Path(trigger_cases_path).read_text(encoding="utf-8"))
+robustness_cases = json.loads(Path(robustness_cases_path).read_text(encoding="utf-8"))
 semantic_config = json.loads(Path(semantic_config_path).read_text(encoding="utf-8"))
+
+def validate_case_suite(name, suite, buckets):
+    seen = {}
+    for bucket in buckets:
+        items = suite.get(bucket)
+        if not isinstance(items, list):
+            raise SystemExit(f"{name} bucket {bucket} must be a list")
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                raise SystemExit(f"{name} item {bucket}[{index}] must be an object")
+            text = item.get("text")
+            family = item.get("family")
+            if not isinstance(text, str) or not text.strip():
+                raise SystemExit(f"{name} item {bucket}[{index}] needs non-empty string text")
+            if not isinstance(family, str) or not family.strip():
+                raise SystemExit(f"{name} item {bucket}[{index}] needs non-empty string family")
+            if text in seen:
+                previous = seen[text]
+                raise SystemExit(
+                    f"{name} duplicate text at {bucket}[{index}] and {previous}"
+                )
+            seen[text] = f"{bucket}[{index}]"
+
+def normalize(text):
+    text = text.lower()
+    text = re.sub(r"[^\w\u4e00-\u9fff]+", " ", text, flags=re.UNICODE)
+    return re.sub(r"\s+", " ", text).strip()
+
+def phrase_present(normalized_text, phrase):
+    candidate = normalize(phrase)
+    if not candidate:
+        return False
+    if re.search(r"[\u4e00-\u9fff]", candidate):
+        return candidate in normalized_text
+    return f" {candidate} " in f" {normalized_text} "
+
+def has_exclusive_opt_out(text):
+    normalized_text = normalize(text)
+    return any(
+        spec.get("exclusive") and any(
+            phrase_present(normalized_text, phrase)
+            for phrase in spec.get("phrases", [])
+        )
+        for spec in semantic_config.get("negative_concepts", {}).values()
+    )
+
+validate_case_suite(
+    "trigger cases", trigger_cases, ("should_trigger", "should_not_trigger", "near_neighbor")
+)
+validate_case_suite(
+    "robustness cases", robustness_cases, ("should_trigger", "should_not_trigger", "near_neighbor")
+)
+for bucket, expected in (("should_trigger", True), ("should_not_trigger", False)):
+    for item in robustness_cases[bucket]:
+        actual = not has_exclusive_opt_out(item["text"])
+        if actual != expected:
+            raise SystemExit(
+                f"robustness default-route invariant failed for {bucket}: {item['text']!r}"
+            )
 for key, value in (
     ("canonical_format", "codex-plugin-skill"),
     ("adapter_targets", "openai"),
@@ -94,7 +173,7 @@ for key, value in (
 if "openai:" not in interface_text or "Native V2" not in interface_text:
     raise SystemExit("interface.yaml missing native V2 openai degradation")
 for key, expected in (
-    ("version", "0.6.2"),
+    ("version", "0.6.3"),
     ("owner", "wwwk893"),
     ("updated_at", "2026-08-06"),
     ("lifecycle_stage", "production"),
@@ -113,6 +192,9 @@ for key in ("input_contract", "output_contract", "rollback_boundary"):
 for bucket in ("should_trigger", "should_not_trigger", "near_neighbor"):
     if not isinstance(trigger_cases.get(bucket), list) or not trigger_cases[bucket]:
         raise SystemExit(f"trigger cases bucket {bucket} is empty")
+for bucket in ("should_trigger", "should_not_trigger"):
+    if not isinstance(robustness_cases.get(bucket), list) or not robustness_cases[bucket]:
+        raise SystemExit(f"robustness cases bucket {bucket} is empty")
 if not semantic_config.get("positive_concepts") or not semantic_config.get("negative_concepts"):
     raise SystemExit("semantic config needs positive and negative concepts")
 ui_prompt = next(
@@ -125,10 +207,17 @@ ui_prompt = next(
 )
 if not ui_prompt or len(ui_prompt) > 128:
     raise SystemExit("openai.yaml default_prompt must be present and at most 128 characters")
+if "$sol-advisor:orchestration" not in interface_text or "$sol-advisor:orchestration" not in ui_prompt:
+    raise SystemExit("default prompts must use the namespaced orchestration skill path")
+if "one selected role" not in native.lower() or "choose the smallest role" not in native.lower():
+    raise SystemExit("native lane must require one selected role and the smallest fitting role")
+if any("spawn all five" in document.lower() for document in (skill, contracts, native)):
+    raise SystemExit("native routing must not spawn all five roles")
 roles = {"deep_explorer", "explorer", "worker", "tester", "reviewer"}
 tools = {"spawn_agent", "list_agents", "wait_agent", "followup_task", "send_message", "interrupt_agent"}
+contract_docs = (skill, contracts, native) + ((readme,) if readme else ())
 for role in roles:
-    if role not in skill or role not in contracts or role not in native or role not in readme:
+    if any(role not in document for document in contract_docs):
         raise SystemExit(f"native role {role} is not documented in every required contract")
 for tool in tools:
     if tool not in skill or tool not in native:
@@ -151,6 +240,69 @@ for field in ("model=gpt-5.6-luna", "reasoning_effort=max", "fork_turns=none"):
 for token in ("same child", "bounded repair/test-only", "otherwise return a blocker"):
     if token not in skill or token not in contracts or token not in native:
         raise SystemExit(f"tester/correction contract is missing {token!r}")
+for token in (
+    "default product writer",
+    "sole writer for that owned set",
+    "correction_round: 0",
+    "continuation_reason",
+    "user_direction",
+    "replacement child",
+    "reset the counter",
+):
+    if not all(token in document for document in (skill, contracts, native)):
+        raise SystemExit(f"native correction/writer contract is missing {token!r}")
+for token in (
+    "actual model",
+    "effort",
+    "sandbox",
+    "permission metadata",
+    "before and after",
+    "OS-enforced",
+    "invalidate",
+    "mutation",
+):
+    if not all(token.lower() in document.lower() for document in (skill, contracts, native)):
+        raise SystemExit(f"read-only observability contract is missing {token!r}")
+for token in (
+    "VERDICT: ship|fix-first|rethink",
+    "REASON:",
+    "VALIDATED:",
+    "UNVALIDATED:",
+    "FINDINGS:",
+    "RECOMMENDATIONS:",
+    "RESIDUAL RISK:",
+):
+    if token not in contracts:
+        raise SystemExit(f"reviewer packet schema is missing {token!r}")
+if "role-contracts.md" not in native:
+    raise SystemExit("native lane must reference the compact role-contract packet schema")
+for token in (
+    "starting branch",
+    "base commit",
+    "exact owned file set",
+    "explicitly authorized changed files",
+    "independent authorization flags",
+    "may be granted together",
+    "force-push",
+    "rewrite history",
+    "remote SHA",
+    "tree",
+    "readback",
+    "Jira",
+    "deploy",
+    "external mutation",
+):
+    if token.lower() not in contracts.lower() or token.lower() not in native.lower():
+        raise SystemExit(f"native-worker Git boundary is missing {token!r}")
+new_opt_outs = {
+    "Don't route this through Sol Advisor; answer directly.",
+    "这次别用 Sol Advisor。",
+    "不用走 Sol Advisor，直接回答。",
+    "不要让 Sol Advisor 介入。",
+}
+not_trigger = {item.get("text") for item in trigger_cases.get("should_not_trigger", [])}
+if not new_opt_outs.issubset(not_trigger):
+    raise SystemExit("new natural Sol Advisor opt-outs are missing from trigger cases")
 tester_auth_tokens = (
     "same browser session",
     "visible CAPTCHA",
@@ -182,10 +334,10 @@ for token in ("narrowest decisive acceptance subset", "risk or impact warrants")
     if token not in skill or token not in contracts or token not in native:
         raise SystemExit(f"acceptance subset contract is missing {token!r}")
 for token in ("local, non-browser checks", "browser/runtime QA", "same tester"):
-    if not all(token in document for document in (skill, contracts, native, readme)):
+    if not all(token in document for document in contract_docs):
         raise SystemExit(f"tester-owned browser acceptance contract is missing {token!r}")
 for token in ("does not require", "app-task", "compatibility", "Terra/Sol"):
-    if not all(token.lower() in document.lower() for document in (skill, native, readme)):
+    if not all(token.lower() in document.lower() for document in ((skill, native) + ((readme,) if readme else ()))):
         raise SystemExit(f"default/compatibility separation is missing {token!r}")
 if "not the default" not in luna.lower() or "explicit" not in luna.lower():
     raise SystemExit("Luna compatibility contract is not explicitly opt-in")
@@ -210,14 +362,20 @@ for token in (
         raise SystemExit(f"Luna compatibility contract missing {token}")
 if "default" not in ui.lower() or "native luna v2" not in ui.lower():
     raise SystemExit("openai metadata does not describe the native V2 default")
-if "default" not in readme.lower() or "legacy" not in readme.lower():
+if readme and ("default" not in readme.lower() or "legacy" not in readme.lower()):
     raise SystemExit("README does not separate default and legacy lanes")
-for requirement in ("python3", "GNU readlink", "POSIX sh", "jq", "shasum"):
-    if requirement.lower() not in readme.lower():
-        raise SystemExit(f"README missing installer/core requirement {requirement}")
-print("native V2/default and compatibility contracts are structurally present")
+if readme:
+    for requirement in ("python3", "GNU readlink", "POSIX sh", "jq", "shasum"):
+        if requirement.lower() not in readme.lower():
+            raise SystemExit(f"README missing installer/core requirement {requirement}")
+print(
+    "native V2/default and compatibility contracts are structurally present; "
+    "default-route/opt-out robustness validated "
+    f"({len(robustness_cases['should_trigger'])} trigger, "
+    f"{len(robustness_cases['should_not_trigger'])} opt-out)"
+)
 PY
-pass "0.6.2 metadata, role inventory, native tools, and compatibility separation"
+pass "0.6.3 metadata, role inventory, native tools, and compatibility separation; default-route/opt-out robustness only (not a general semantic model)"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -491,4 +649,4 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$null_id" >/dev/n
 fi
 pass "runtime inspector rejects null sandbox, permission, and cwd metadata"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.2 native Luna V2 checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.3 native Luna V2 checks completed in $tmp_dir"

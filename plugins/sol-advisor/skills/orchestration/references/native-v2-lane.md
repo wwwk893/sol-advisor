@@ -17,10 +17,25 @@ ordinary work when no conflict evidence exists. There is no silent fallback. `pr
 has the same warning semantics when omitted. The primary model and effort are
 informational and are not a hard stop.
 
-`worker` is the only role allowed to write product files for a delegated implementation
-and only inside its owned set. Read-only roles may be run concurrently when their
-ownership does not overlap. In a shared worktree, never run two writers at once. Three
-concurrent children is a suggested default ceiling, not a hard limit.
+The primary uses one selected role from this set; choose the smallest role that fits the request.
+
+`worker` is the default product writer. The tester is the only exception to product writes, and
+only with explicit repair authorization, exact file ownership, a failed relevant check, and no
+active worker writer; then the tester is the sole writer for that owned set. Read-only roles may
+be run concurrently when their ownership does not overlap. In a shared worktree, never run two
+writers at once. Three concurrent children is a suggested default ceiling, not a hard limit.
+
+When Git work is authorized for a native worker, record the starting branch, base commit, and
+`git status`; stage only explicitly authorized changed files (the exact owned file set); model
+commit and push as independent authorization flags (they may be granted together); never
+force-push or rewrite history. The primary accepts only after verifying remote SHA, tree, and
+readback acceptance. Git permission does not imply Jira, deploy, or other external mutation.
+
+Behaviorally read-only `deep_explorer`, `explorer`, `reviewer`, and read-only `tester` runs must
+capture actual model, effort, sandbox, and permission metadata, including a possible
+`danger-full-access` profile. Record and compare worktree state before and after work; host
+metadata is not OS-enforced read-only isolation. If a mutation is observed, fail and invalidate
+the result.
 
 ## Lifecycle
 
@@ -29,8 +44,9 @@ concurrent children is a suggested default ceiling, not a hard limit.
 The primary resolves intent, architecture, risk, ownership, and acceptance evidence.
 Choose the smallest role: explorers for questions, worker for settled implementation,
 tester for focused runtime evidence, and reviewer only for a high-risk boundary or an
-explicit user request. A tester does not change product code by default; the parent may
-assign a bounded repair/test-only change with exact ownership; otherwise return a blocker.
+explicit user request. A tester does not change product code by default; its only bounded repair/test-only
+exception requires explicit repair authorization, exact file ownership, a failed relevant check, and no active
+worker writer; otherwise return a blocker.
 A small or tightly coupled change may stay in the primary session. Browser/runtime QA still
 routes to the tester unless the user explicitly asks the primary to perform it.
 
@@ -47,6 +63,8 @@ model=gpt-5.6-luna
 reasoning_effort=max
 fork_turns=none
 ```
+
+The compact task packet and reviewer return schema are defined in `role-contracts.md`.
 
 ### PREFLIGHT
 
@@ -83,9 +101,11 @@ browser session.
 
 If the result is partial or a check fails, issue a precise `followup_task` (or
 `send_message`) to the same child with the failing evidence and required correction.
-The default is at most two correction rounds after the first execution. Continue beyond
-that when clear progress remains or the user requests it. Never create a replacement
-child merely to dodge an unresolved correction.
+Record machine-readable `correction_round: 0` for the initial packet and `1` or `2` for
+corrections. Beyond two requires a recorded `continuation_reason`; record `user_direction` as the
+quoted direction when present, otherwise `none`. Continue beyond two only for clear progress or
+explicit user direction. Never create a replacement child merely to reset the counter or dodge an
+unresolved correction.
 
 ### VALIDATE
 
@@ -99,11 +119,11 @@ no forbidden external mutation or secret handling occurred.
 ### REVIEW (optional)
 
 For high-risk changes or an explicit review request, spawn `reviewer` with a fresh
-`fork_turns: none` packet. Require a read-only verdict of `ship`, `fix-first`, or
-`rethink`. Capture actual sandbox and permission metadata; if the runtime broadens a
-requested read-only profile, report residual risk and verify exact before/after state.
-Any mutation invalidates the verdict and requires a fresh review. Ordinary low-risk
-tasks do not require this extra role.
+`fork_turns: none` packet and require the reviewer return schema from `role-contracts.md`.
+Capture actual model, effort, sandbox, and permission metadata for every behaviorally read-only
+role; if the host reports `danger-full-access`, report that writable profile, compare exact
+before/after state, and fail on mutation. Any mutation invalidates the result and requires a fresh
+run. Ordinary low-risk tasks do not require this extra role.
 
 ### ACCEPT / STOP
 

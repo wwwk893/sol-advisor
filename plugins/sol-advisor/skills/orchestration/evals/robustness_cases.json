@@ -55,8 +55,6 @@
     {"text": "先解释状态，再让 worker 实现修复。", "family": "cn_mixed_explain_worker_no_supervision"},
     {"text": "先说明状态，再让 tester 修复失败。", "family": "cn_mixed_explain_tester_no_supervision"},
     {"text": "Have the reviewer check the public API diff.", "family": "reviewer_check"},
-    {"text": "请让 reviewer 检查公共 API diff。", "family": "cn_reviewer_check"}
-  ,
     {"text": "What does a worker do in this workflow?", "family": "worker_definition"},
     {"text": "Explain the distinction between tester and reviewer.", "family": "role_comparison"},
     {"text": "The phrase ‘run tester’ is quoted; explain it.", "family": "quoted_role_action"},

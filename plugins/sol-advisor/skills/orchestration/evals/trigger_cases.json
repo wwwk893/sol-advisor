@@ -98,9 +98,13 @@
   ],
   "should_not_trigger": [
     {"text": "Do not use Sol Advisor for this task; answer directly.", "family": "explicit_sol_advisor_opt_out"},
+    {"text": "Don't route this through Sol Advisor; answer directly.", "family": "natural_sol_advisor_opt_out"},
     {"text": "Do not use orchestration for this request; keep it outside the skill.", "family": "explicit_orchestration_opt_out"},
     {"text": "Please skip Sol Advisor and orchestration for this task.", "family": "explicit_route_skip"},
     {"text": "本次任务不要使用 Sol Advisor 编排。", "family": "cn_explicit_sol_advisor_opt_out"},
+    {"text": "这次别用 Sol Advisor。", "family": "cn_natural_sol_advisor_opt_out"},
+    {"text": "不用走 Sol Advisor，直接回答。", "family": "cn_natural_sol_advisor_route_opt_out"},
+    {"text": "不要让 Sol Advisor 介入。", "family": "cn_natural_sol_advisor_intervention_opt_out"},
     {"text": "不要走 orchestration，直接回答。", "family": "cn_explicit_orchestration_opt_out"}
   ],
   "near_neighbor": [

@@ -38,6 +38,8 @@
         "不要用 sol advisor", "不要用 orchestration",
         "不使用 sol advisor", "不使用 orchestration",
         "不要走 orchestration", "不走 orchestration",
+        "don't route this through sol advisor",
+        "这次别用 sol advisor", "不用走 sol advisor", "不要让 sol advisor 介入",
         "跳过 sol advisor", "跳过 orchestration"
       ]
     }

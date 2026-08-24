@@ -19,7 +19,7 @@ or explicit compatibility [luna-task-lane.md](references/luna-task-lane.md) on d
   exact-scope packet. Use the primary only when the user requests no subagent or as a
   disclosed safe fallback when delegation is unavailable and was not explicitly required.
   Git authorization does not imply Jira, deploy, force-push, or broader file authority.
-- **Native V2 (default delegation):** delegate useful engineering work to
+- **Native V2 (default delegation):** delegate useful engineering work to one selected
   `deep_explorer`, `explorer`, `worker`, `tester`, or risk-gated `reviewer` via native
   `spawn_agent`, `list_agents`, `wait_agent`, `followup_task`, `send_message`, and
   `interrupt_agent`.
@@ -35,11 +35,20 @@ and `fork_turns=none`. Role availability and accepted Luna/max spawn are hard pr
 Metadata conflict or fallback is a hard stop; missing model/effort/
 priority is an `unobservable` warning when no conflict evidence exists. No silent fallback.
 
-One execution plus at most two correction rounds is the default; continue with clear
-progress or user direction. Three concurrent children is a soft suggestion; one writer
-at a time is hard. Review only for material risk or user request. Tester is read-only
-by default; a parent may assign bounded repair/test-only ownership, otherwise return a blocker.
-Corrections use the same child.
+One execution plus at most two correction rounds is the default; record a machine-readable
+`correction_round: 0` on the initial packet and use `1` or `2` for corrections sent to the same child.
+Continuing beyond two requires a recorded `continuation_reason`; record `user_direction` as the
+quoted direction when present, otherwise `none`. Continue beyond two only for clear progress or
+explicit user direction; never create a replacement child to reset the counter.
+Three concurrent children is a soft suggestion; one writer at a time is hard. The worker is the
+default product writer; a tester is read-only by default and may write only as an explicit bounded repair/test-only
+exception with repair authorization, exact file ownership, a failed relevant check, and no active worker writer;
+then it is the sole writer for that owned set; otherwise return a blocker. Review only for material risk or user request.
+
+Behaviorally read-only `deep_explorer`, `explorer`, `reviewer`, and read-only `tester` runs must
+capture actual model, effort, sandbox, and permission metadata, including a possible `danger-full-access`
+profile. Record and compare worktree state before and after work; host metadata is not OS-enforced
+read-only isolation. If mutation is observed, fail and invalidate the read-only result.
 
 Children preserve unrelated edits and do not commit, push, deploy, delete, upload,
 mutate external services, or handle secrets unless explicitly authorized in scope.
