@@ -1,4 +1,4 @@
 interface:
   display_name: "Sol Advisor Orchestration"
-  short_description: "Default routing with worker-preferred commit/push and native Luna V2 engineering delegation"
-  default_prompt: "Route through $sol-advisor:orchestration; prefer a scoped worker for authorized commit/push and native Luna V2 engineering."
+  short_description: "Default routing: Sol owns critical judgment; native Luna V2 executes decision-complete work"
+  default_prompt: "Route through $sol-advisor:orchestration; keep critical judgment in Sol and bounded execution in Luna Max."

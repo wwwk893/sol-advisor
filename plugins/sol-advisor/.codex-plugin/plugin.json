@@ -1,7 +1,7 @@
 {
   "name": "sol-advisor",
-  "version": "0.6.3",
-  "description": "Codex-native architect workflow with primary-only simple lanes, worker-preferred commit/push, native Luna V2 engineering delegation, and explicit compatibility lanes.",
+  "version": "0.6.5",
+  "description": "Codex-native workflow that reserves high-value judgment for Sol and delegates decision-complete bounded execution to Luna V2.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/wwwk893/sol-advisor#readme",
   "repository": "https://github.com/wwwk893/sol-advisor",
@@ -10,12 +10,12 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sol Advisor",
-    "shortDescription": "Default routing with primary-only simple lanes, worker-preferred commit/push, and native Luna V2 engineering delegation.",
-    "longDescription": "Sol Advisor routes every new request by default while keeping simple, status-only, install-only, and no-subagent work primary-only. Authorized commit/push prefers a compact native worker route that reuses the implementation worker when available, reducing primary-context token use while preserving exact scope and non-force push. Other engineering work that benefits from delegation uses native V2 roles through gpt-5.6-luna at max effort; the primary owns architecture and acceptance. App-task Luna and legacy Terra/Sol remain explicit compatibility options.",
+    "shortDescription": "Sol owns critical judgment; native Luna V2 executes decision-complete bounded work.",
+    "longDescription": "Sol Advisor routes every request by default. Sol primary keeps intent, architecture/contracts, authorization, risk, option selection, integration, and acceptance; one native Luna V2 role on gpt-5.6-luna at max effort receives an exact bounded evidence question or decision-complete execution. Tiny work stays primary when delegation overhead would cost more context. Authorized commit/push prefers a scoped worker, while app-task Luna and legacy Terra/Sol remain explicit compatibility options.",
     "developerName": "wwwk893 (maintainer; original author Daniel McAteer)",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "websiteURL": "https://github.com/wwwk893/sol-advisor",
-    "defaultPrompt": ["Route through Sol Advisor; prefer a scoped worker for authorized commit/push and native Luna V2 engineering.", "Use app-task Luna or legacy Terra/Sol only when I explicitly authorize compatibility."]
+    "defaultPrompt": ["Route through Sol Advisor; keep high-value judgment in Sol and delegate decision-complete execution to Luna Max.", "Use app-task Luna or legacy Terra/Sol only when I explicitly authorize compatibility."]
   }
 }

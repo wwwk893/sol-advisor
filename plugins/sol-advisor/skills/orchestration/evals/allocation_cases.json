@@ -1,0 +1,117 @@
+{
+  "suite": "Sol-primary cognitive allocation holdout",
+  "cases": [
+    {
+      "id": "ambiguous_api_ui_contract",
+      "text": "The API and UI acceptance documents disagree; decide which contract to implement.",
+      "decision_owner": "sol",
+      "execution_route": "deep_explorer",
+      "luna_scope": "Collect the conflicting contracts, callers, and tradeoffs only; Sol chooses the contract.",
+      "expected_outcome": "No implementation packet is issued until Sol resolves the contract."
+    },
+    {
+      "id": "exact_bounded_refactor",
+      "text": "Rename this settled label in the two named files and run the named focused test.",
+      "decision_owner": "sol",
+      "execution_route": "worker",
+      "luna_scope": "Apply the exact owned-file change and focused check within the settled contract.",
+      "expected_outcome": "The worker returns the diff and evidence; Sol inspects and accepts."
+    },
+    {
+      "id": "caller_trace",
+      "text": "Trace every caller of this duplicate-validation helper and report the real runtime path.",
+      "decision_owner": "sol",
+      "execution_route": "explorer",
+      "luna_scope": "Return paths, callers, and evidence without choosing or implementing a fix.",
+      "expected_outcome": "Sol uses the evidence to decide the change location."
+    },
+    {
+      "id": "known_staging_timeout",
+      "text": "Reproduce the known staging timeout in the declared non-production environment and capture logs and network evidence.",
+      "decision_owner": "sol",
+      "execution_route": "tester",
+      "luna_scope": "Run the settled reproduction and capture evidence; do not accept residual risk.",
+      "expected_outcome": "The same tester returns runtime evidence and Sol decides acceptance or correction."
+    },
+    {
+      "id": "browser_plugin_qa",
+      "text": "Test this UI in a browser and capture runtime evidence; no browser tool was explicitly selected.",
+      "decision_owner": "sol",
+      "execution_route": "tester",
+      "luna_scope": "Load $browser:control-in-app-browser and use browser-client; its tab.playwright API is allowed, but standalone Playwright CLI is not.",
+      "expected_outcome": "The tester owns browser QA while Sol inspects evidence; no standalone Playwright fallback occurs."
+    },
+    {
+      "id": "browser_plugin_unavailable",
+      "text": "Run browser QA, but the Codex Browser plugin is unavailable and Playwright was not explicitly authorized.",
+      "decision_owner": "sol",
+      "execution_route": "blocked",
+      "luna_scope": "none",
+      "expected_outcome": "Report the Browser plugin blocker; never silently fall back to standalone Playwright CLI."
+    },
+    {
+      "id": "authorized_git_closeout",
+      "text": "The accepted diff, exact files, commit message, main target, and non-force push are authorized.",
+      "decision_owner": "sol",
+      "execution_route": "worker",
+      "luna_scope": "Perform the exact Git closeout and report branch, SHA, tree, and readback evidence.",
+      "expected_outcome": "Sol verifies the remote SHA, tree, and readback before acceptance."
+    },
+    {
+      "id": "authorized_jira_resolve",
+      "text": "Resolve the named bug with the exact transition, comment, assignment, and fixVersion already authorized.",
+      "decision_owner": "sol",
+      "execution_route": "worker",
+      "luna_scope": "Perform read-before-write Jira mechanics and return the post-write readback.",
+      "expected_outcome": "Any issue, type, status, or field ambiguity blocks and returns to Sol."
+    },
+    {
+      "id": "production_auth_rollout",
+      "text": "Choose whether to accept the residual risk of a production authentication rollout.",
+      "decision_owner": "sol",
+      "execution_route": "reviewer",
+      "luna_scope": "Report independent findings, recommendation, validated gaps, and residual risk only.",
+      "expected_outcome": "Sol alone chooses rollout and accepts or rejects residual risk."
+    },
+    {
+      "id": "official_dependency_research",
+      "text": "Compare current official dependency documentation and present supported adoption options.",
+      "decision_owner": "sol",
+      "execution_route": "explorer",
+      "luna_scope": "Collect primary-source facts, compatibility evidence, and bounded options.",
+      "expected_outcome": "Sol chooses whether and how the dependency is adopted."
+    },
+    {
+      "id": "tiny_status_answer",
+      "text": "Tell me the current branch and whether the worktree is clean.",
+      "decision_owner": "sol",
+      "execution_route": "primary",
+      "luna_scope": "none",
+      "expected_outcome": "Keep the task primary-only because delegation overhead exceeds the saved context."
+    },
+    {
+      "id": "tiny_tightly_coupled_edit",
+      "text": "Change one settled word in the file already open and run the one-line check.",
+      "decision_owner": "sol",
+      "execution_route": "primary",
+      "luna_scope": "none",
+      "expected_outcome": "Keep the tightly coupled edit primary-only when a packet would cost more than the work."
+    },
+    {
+      "id": "unknown_secret_rotation",
+      "text": "Rotate a credential, but the account, environment, target, and rollback are unknown.",
+      "decision_owner": "sol",
+      "execution_route": "blocked",
+      "luna_scope": "none",
+      "expected_outcome": "Request the missing authority and target; never delegate or infer secret handling."
+    },
+    {
+      "id": "contradictory_execution_packet",
+      "text": "Implement and deploy now, but the packet names two incompatible architectures and no acceptance target.",
+      "decision_owner": "sol",
+      "execution_route": "blocked",
+      "luna_scope": "none",
+      "expected_outcome": "Return the contradiction to Sol; no Luna execution role invents the decision."
+    }
+  ]
+}

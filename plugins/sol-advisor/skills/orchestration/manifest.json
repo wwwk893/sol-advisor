@@ -1,8 +1,8 @@
 {
   "name": "orchestration",
-  "version": "0.6.3",
+  "version": "0.6.5",
   "owner": "wwwk893",
-  "updated_at": "2026-08-06",
+  "updated_at": "2026-08-25",
   "status": "active",
   "maturity_tier": "production",
   "lifecycle_stage": "production",
@@ -10,7 +10,7 @@
   "review_cadence": "runtime/routing changes",
   "target_platforms": ["openai-codex"],
   "factory_components": ["references", "evals"],
-  "input_contract": "Any new user request unless it explicitly opts out of Sol Advisor/orchestration; choose direct primary-only handling or delegated native V2 work.",
-  "output_contract": "A primary-owned response or tester-backed acceptance handoff with status, changed files when applicable, decisive evidence, gaps, and risk.",
+  "input_contract": "Any new user request unless it explicitly opts out; Sol keeps high-value judgment, delegates exact evidence questions, and sends execution only in a decision-complete native V2 packet.",
+  "output_contract": "A Sol-owned decision and acceptance response, optionally backed by a bounded Luna handoff with status, changed files, decisive evidence, gaps, and risk.",
   "rollback_boundary": "Revert only this skill package's files; do not mutate child worktrees, external services, or user roles."
 }

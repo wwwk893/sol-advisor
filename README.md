@@ -6,10 +6,14 @@ answers, status-only, install-only, and no-subagent requests stay primary-only. 
 commit/push prefers reusing the implementation worker or starting one bounded worker with
 an exact-scope packet, reducing primary-context token use. Other engineering work that
 benefits from delegation uses the native multi-agent V2 runtime. The primary session owns
-requirements, architecture, spot-checks, and acceptance coordination, while
-runtime-configured Luna agents handle bounded work.
-Browser/runtime QA stays with the same tester end to end unless the user explicitly asks
-the primary to perform it.
+the highest-value judgment: intent, architecture/contracts, authorization, risk/rollback,
+option selection, integration, and acceptance. Runtime-configured Luna agents handle bounded
+evidence under an exact question, or execution after receiving a decision-complete packet. Small work stays primary
+when packet and review overhead would cost more context than delegation saves.
+Browser/runtime QA stays with the same tester using `$browser:control-in-app-browser` and
+its browser-client tools, including its own `tab.playwright` API. Standalone Playwright
+skills or CLI are not a fallback unless the user explicitly requests Playwright; an
+unavailable Browser plugin blocks the browser run, so never silently fall back.
 The only route opt-out is an explicit request not to use Sol Advisor or orchestration
 for the current task.
 
@@ -26,9 +30,9 @@ The native lane selects a role for the task and explicitly requests
 
 | Role | Use it for | Default mutation boundary |
 |---|---|---|
-| `deep_explorer` | Ambiguous, cross-module, or architecture-sensitive investigation | Read-only |
+| `deep_explorer` | Ambiguous, cross-module, or architecture-sensitive evidence and options | Read-only |
 | `explorer` | Bounded code/data tracing and evidence collection | Read-only |
-| `worker` | A settled implementation with one owned file set | The sole writer in a shared worktree |
+| `worker` | A decision-complete implementation with one owned file set | The sole writer in a shared worktree |
 | `tester` | Focused tests, runtime reproduction, and failure classification | No product code by default; parent-assigned bounded repair may be allowed |
 | `reviewer` | High-risk or user-requested independent review | Read-only verdict |
 
@@ -55,16 +59,20 @@ reasoning_effort=max
 fork_turns=none
 ```
 
-Every child receives a compact self-contained packet with objective, ownership,
-interfaces, constraints, verification, and a structured return. Children must preserve
+Every child receives a compact role-complete packet with objective, ownership, interfaces,
+constraints, verification, and a structured return. Evidence-only packets may carry exact
+Sol-owned questions; execution packets must settle architecture, authorization, and risk first.
+Unresolved execution judgment returns `blocked` to Sol. Children must preserve
 unrelated edits and may not commit, push, deploy, delete, upload, or handle secrets
 unless the user explicitly authorizes that action and the primary keeps it in scope.
 When a child fails, correct the specification and follow up with that same child. The
 primary spot-checks the actual diff and reruns the narrowest decisive acceptance subset
 with local, non-browser checks. It inspects tester evidence and sends gaps back to the same
-tester instead of repeating browser/runtime QA. It expands validation only when risk or
-impact warrants it. Lightweight or tightly coupled changes may be implemented directly in
-the primary session.
+tester instead of repeating browser/runtime QA. The tester uses Browser's browser-client
+tools, not the standalone `$playwright`/`$playwright-interactive` skills, `npx playwright`,
+or another Playwright CLI path unless explicitly requested. Browser's own `tab.playwright`
+API remains allowed. It expands validation only when risk or impact warrants it. Lightweight
+or tightly coupled changes may be implemented directly in the primary session.
 
 The native lane does not require app-task tools, a nested Codex CLI, or an installed
 companion role. Do not install or remove roles automatically.

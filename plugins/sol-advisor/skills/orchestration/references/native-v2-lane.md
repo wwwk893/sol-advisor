@@ -18,6 +18,11 @@ has the same warning semantics when omitted. The primary model and effort are
 informational and are not a hard stop.
 
 The primary uses one selected role from this set; choose the smallest role that fits the request.
+Sol keeps intent, architecture/contracts, authorization, risk/rollback, irreversible scope,
+option selection, integration, residual-risk acceptance, and final acceptance. Luna receives an
+exact Sol-owned question for bounded evidence or a decision-complete execution packet. If an
+execution decision is not settled, gather evidence only or return `blocked`; never delegate the
+final choice.
 
 `worker` is the default product writer. The tester is the only exception to product writes, and
 only with explicit repair authorization, exact file ownership, a failed relevant check, and no
@@ -41,14 +46,22 @@ the result.
 
 ### PREPARE
 
-The primary resolves intent, architecture, risk, ownership, and acceptance evidence.
+The primary resolves intent, architecture/contracts, authorization, risk/rollback,
+irreversible scope, ownership, option selection, and acceptance evidence.
 Choose the smallest role: explorers for questions, worker for settled implementation,
 tester for focused runtime evidence, and reviewer only for a high-risk boundary or an
 explicit user request. A tester does not change product code by default; its only bounded repair/test-only
 exception requires explicit repair authorization, exact file ownership, a failed relevant check, and no active
 worker writer; otherwise return a blocker.
-A small or tightly coupled change may stay in the primary session. Browser/runtime QA still
-routes to the tester unless the user explicitly asks the primary to perform it.
+A small or tightly coupled change stays in the primary session when packet and review overhead
+would exceed the context or quality saved. Do not spawn an execution role until its packet is
+decision-complete; an evidence-only role may investigate an exact unresolved Sol-owned question.
+Unresolved or contradictory execution judgment returns to Sol. Browser/runtime QA still
+routes to the tester unless the user explicitly asks the primary to perform it. The tester
+loads `$browser:control-in-app-browser` and uses its browser-client tools; Browser's own
+`tab.playwright` API is allowed. Do not use standalone `$playwright`/`$playwright-interactive`,
+`npx playwright`, or Playwright CLI unless the user explicitly requests Playwright for the
+current task. If Browser is unavailable, return `blocked`; never silently fall back.
 
 Build a compact packet from
 [role-contracts.md](role-contracts.md). State `fork_turns: none`, exact owned files,

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Repository-local verification for Sol Advisor 0.6.3.
+# Repository-local verification for Sol Advisor 0.6.5.
 
 set -eu
 
@@ -27,11 +27,12 @@ interface=$plugin_dir/skills/orchestration/agents/interface.yaml
 skill_manifest=$plugin_dir/skills/orchestration/manifest.json
 trigger_cases=$plugin_dir/skills/orchestration/evals/trigger_cases.json
 robustness_cases=$plugin_dir/skills/orchestration/evals/robustness_cases.json
+allocation_cases=$plugin_dir/skills/orchestration/evals/allocation_cases.json
 semantic_config=$plugin_dir/skills/orchestration/evals/semantic_config.json
 
 for required in "$installer" "$runtime_inspector" "$manifest" "$skill" "$contracts" \
   "$native_contract" "$luna_contract" "$ui" "$interface" "$skill_manifest" \
-  "$trigger_cases" "$robustness_cases" "$semantic_config"; do
+  "$trigger_cases" "$robustness_cases" "$allocation_cases" "$semantic_config"; do
   test -f "$required" || fail "required file missing: $required"
 done
 
@@ -58,8 +59,9 @@ jq empty "$manifest"
 jq empty "$skill_manifest"
 jq empty "$trigger_cases"
 jq empty "$robustness_cases"
+jq empty "$allocation_cases"
 jq empty "$semantic_config"
-python3 - "$manifest" "$skill" "$contracts" "$native_contract" "$luna_contract" "$readme_arg" "$ui" "$interface" "$skill_manifest" "$trigger_cases" "$robustness_cases" "$semantic_config" <<'PY'
+python3 - "$manifest" "$skill" "$contracts" "$native_contract" "$luna_contract" "$readme_arg" "$ui" "$interface" "$skill_manifest" "$trigger_cases" "$robustness_cases" "$allocation_cases" "$semantic_config" <<'PY'
 from pathlib import Path
 import json
 import re
@@ -67,10 +69,10 @@ import sys
 
 manifest_path, *paths = sys.argv[1:]
 doc_paths = paths[:6]
-interface_path, skill_manifest_path, trigger_cases_path, robustness_cases_path, semantic_config_path = paths[6:]
+interface_path, skill_manifest_path, trigger_cases_path, robustness_cases_path, allocation_cases_path, semantic_config_path = paths[6:]
 manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-if manifest.get("version") != "0.6.3":
-    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.3")
+if manifest.get("version") != "0.6.5":
+    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.5")
 prompts = manifest.get("interface", {}).get("defaultPrompt")
 if not isinstance(prompts, list) or not prompts or not all(isinstance(p, str) and p.strip() for p in prompts):
     raise SystemExit("manifest defaultPrompt must be a non-empty list of strings")
@@ -98,6 +100,7 @@ interface_text = Path(interface_path).read_text(encoding="utf-8")
 skill_manifest = json.loads(Path(skill_manifest_path).read_text(encoding="utf-8"))
 trigger_cases = json.loads(Path(trigger_cases_path).read_text(encoding="utf-8"))
 robustness_cases = json.loads(Path(robustness_cases_path).read_text(encoding="utf-8"))
+allocation_cases = json.loads(Path(allocation_cases_path).read_text(encoding="utf-8"))
 semantic_config = json.loads(Path(semantic_config_path).read_text(encoding="utf-8"))
 
 def validate_case_suite(name, suite, buckets):
@@ -151,6 +154,93 @@ validate_case_suite(
 validate_case_suite(
     "robustness cases", robustness_cases, ("should_trigger", "should_not_trigger", "near_neighbor")
 )
+allocation_items = allocation_cases.get("cases")
+if allocation_cases.get("suite") != "Sol-primary cognitive allocation holdout":
+    raise SystemExit("allocation cases have the wrong suite name")
+if not isinstance(allocation_items, list) or not allocation_items:
+    raise SystemExit("allocation cases must contain a non-empty cases list")
+allowed_routes = {"primary", "blocked", "deep_explorer", "explorer", "worker", "tester", "reviewer"}
+delegated_routes = allowed_routes - {"primary", "blocked"}
+seen_ids = set()
+seen_texts = set()
+for index, item in enumerate(allocation_items):
+    if not isinstance(item, dict):
+        raise SystemExit(f"allocation case {index} must be an object")
+    for field in ("id", "text", "decision_owner", "execution_route", "luna_scope", "expected_outcome"):
+        if not isinstance(item.get(field), str) or not item[field].strip():
+            raise SystemExit(f"allocation case {index} needs non-empty string {field}")
+    if item["id"] in seen_ids or item["text"] in seen_texts:
+        raise SystemExit(f"allocation case {index} duplicates an id or text")
+    seen_ids.add(item["id"])
+    seen_texts.add(item["text"])
+    if item["decision_owner"] != "sol":
+        raise SystemExit(f"allocation case {item['id']} must keep decision_owner=sol")
+    route = item["execution_route"]
+    if route not in allowed_routes:
+        raise SystemExit(f"allocation case {item['id']} has unknown route {route!r}")
+    if route in delegated_routes and item["luna_scope"] == "none":
+        raise SystemExit(f"delegated allocation case {item['id']} needs a bounded Luna scope")
+    if route in {"primary", "blocked"} and item["luna_scope"] != "none":
+        raise SystemExit(f"non-delegated allocation case {item['id']} must use luna_scope=none")
+required_allocation_ids = {
+    "ambiguous_api_ui_contract",
+    "exact_bounded_refactor",
+    "caller_trace",
+    "known_staging_timeout",
+    "browser_plugin_qa",
+    "browser_plugin_unavailable",
+    "authorized_git_closeout",
+    "authorized_jira_resolve",
+    "production_auth_rollout",
+    "official_dependency_research",
+    "tiny_status_answer",
+    "tiny_tightly_coupled_edit",
+    "unknown_secret_rotation",
+    "contradictory_execution_packet",
+}
+if seen_ids != required_allocation_ids:
+    raise SystemExit("allocation cases do not cover the required decision boundaries exactly")
+expected_allocation_routes = {
+    "ambiguous_api_ui_contract": "deep_explorer",
+    "exact_bounded_refactor": "worker",
+    "caller_trace": "explorer",
+    "known_staging_timeout": "tester",
+    "browser_plugin_qa": "tester",
+    "browser_plugin_unavailable": "blocked",
+    "authorized_git_closeout": "worker",
+    "authorized_jira_resolve": "worker",
+    "production_auth_rollout": "reviewer",
+    "official_dependency_research": "explorer",
+    "tiny_status_answer": "primary",
+    "tiny_tightly_coupled_edit": "primary",
+    "unknown_secret_rotation": "blocked",
+    "contradictory_execution_packet": "blocked",
+}
+actual_allocation_routes = {item["id"]: item["execution_route"] for item in allocation_items}
+if actual_allocation_routes != expected_allocation_routes:
+    raise SystemExit("allocation cases changed a required Sol/Luna execution route")
+required_outcome_phrases = {
+    "ambiguous_api_ui_contract": ("No implementation packet", "Sol resolves"),
+    "exact_bounded_refactor": ("Sol inspects and accepts",),
+    "caller_trace": ("Sol uses the evidence",),
+    "known_staging_timeout": ("Sol decides acceptance",),
+    "browser_plugin_qa": ("tester owns browser QA", "no standalone Playwright fallback"),
+    "browser_plugin_unavailable": ("Browser plugin blocker", "never silently fall back to standalone Playwright CLI"),
+    "authorized_git_closeout": ("Sol verifies",),
+    "authorized_jira_resolve": ("blocks and returns to Sol",),
+    "production_auth_rollout": ("Sol alone", "accepts or rejects residual risk"),
+    "official_dependency_research": ("Sol chooses",),
+    "tiny_status_answer": ("primary-only",),
+    "tiny_tightly_coupled_edit": ("primary-only",),
+    "unknown_secret_rotation": ("never delegate",),
+    "contradictory_execution_packet": ("no Luna execution role invents",),
+}
+for item in allocation_items:
+    for phrase in required_outcome_phrases[item["id"]]:
+        if phrase not in item["expected_outcome"]:
+            raise SystemExit(
+                f"allocation case {item['id']} lost required outcome meaning {phrase!r}"
+            )
 for bucket, expected in (("should_trigger", True), ("should_not_trigger", False)):
     for item in robustness_cases[bucket]:
         actual = not has_exclusive_opt_out(item["text"])
@@ -173,9 +263,9 @@ for key, value in (
 if "openai:" not in interface_text or "Native V2" not in interface_text:
     raise SystemExit("interface.yaml missing native V2 openai degradation")
 for key, expected in (
-    ("version", "0.6.3"),
+    ("version", "0.6.5"),
     ("owner", "wwwk893"),
-    ("updated_at", "2026-08-06"),
+    ("updated_at", "2026-08-25"),
     ("lifecycle_stage", "production"),
     ("context_budget_tier", "production"),
     ("review_cadence", "runtime/routing changes"),
@@ -222,6 +312,20 @@ for role in roles:
 for tool in tools:
     if tool not in skill or tool not in native:
         raise SystemExit(f"native tool {tool} is missing from the default lane")
+for token in ("decision-complete", "packet and review overhead"):
+    if not all(token in document for document in contract_docs):
+        raise SystemExit(f"Sol/Luna cognitive allocation contract is missing {token!r}")
+for token in (
+    "SETTLED DECISIONS",
+    "Intent and observable outcome",
+    "Architecture and contracts",
+    "Authorization, risk, and rollback",
+    "Acceptance evidence",
+    "final architecture",
+    "accept residual risk",
+):
+    if token not in contracts:
+        raise SystemExit(f"decision-complete task packet is missing {token!r}")
 for token in (
     "gpt-5.6-luna",
     "max",
@@ -238,7 +342,7 @@ for field in ("model=gpt-5.6-luna", "reasoning_effort=max", "fork_turns=none"):
         if field not in document:
             raise SystemExit(f"{label} lacks explicit native route field {field!r}")
 for token in ("same child", "bounded repair/test-only", "otherwise return a blocker"):
-    if token not in skill or token not in contracts or token not in native:
+    if token not in contracts or token not in native:
         raise SystemExit(f"tester/correction contract is missing {token!r}")
 for token in (
     "default product writer",
@@ -249,7 +353,7 @@ for token in (
     "replacement child",
     "reset the counter",
 ):
-    if not all(token in document for document in (skill, contracts, native)):
+    if not all(token in document for document in (contracts, native)):
         raise SystemExit(f"native correction/writer contract is missing {token!r}")
 for token in (
     "actual model",
@@ -261,7 +365,7 @@ for token in (
     "invalidate",
     "mutation",
 ):
-    if not all(token.lower() in document.lower() for document in (skill, contracts, native)):
+    if not all(token.lower() in document.lower() for document in (contracts, native)):
         raise SystemExit(f"read-only observability contract is missing {token!r}")
 for token in (
     "VERDICT: ship|fix-first|rethink",
@@ -276,6 +380,9 @@ for token in (
         raise SystemExit(f"reviewer packet schema is missing {token!r}")
 if "role-contracts.md" not in native:
     raise SystemExit("native lane must reference the compact role-contract packet schema")
+for reference in ("references/role-contracts.md", "references/native-v2-lane.md"):
+    if reference not in skill:
+        raise SystemExit(f"SKILL must load delegated-work reference {reference!r}")
 for token in (
     "starting branch",
     "base commit",
@@ -336,6 +443,12 @@ for token in ("narrowest decisive acceptance subset", "risk or impact warrants")
 for token in ("local, non-browser checks", "browser/runtime QA", "same tester"):
     if not all(token in document for document in contract_docs):
         raise SystemExit(f"tester-owned browser acceptance contract is missing {token!r}")
+for token in ("$browser:control-in-app-browser", "browser-client", "tab.playwright", "Playwright CLI", "silently fall back"):
+    if not all(token in document for document in contract_docs):
+        raise SystemExit(f"Browser-plugin routing contract is missing {token!r}")
+for token in ("Browser tool", "Playwright authorization"):
+    if token not in contracts:
+        raise SystemExit(f"tester browser task packet is missing {token!r}")
 for token in ("does not require", "app-task", "compatibility", "Terra/Sol"):
     if not all(token.lower() in document.lower() for document in ((skill, native) + ((readme,) if readme else ()))):
         raise SystemExit(f"default/compatibility separation is missing {token!r}")
@@ -370,12 +483,13 @@ if readme:
             raise SystemExit(f"README missing installer/core requirement {requirement}")
 print(
     "native V2/default and compatibility contracts are structurally present; "
+    f"Sol-primary allocation fixture structure validated ({len(allocation_items)} cases; not runtime routing proof); "
     "default-route/opt-out robustness validated "
     f"({len(robustness_cases['should_trigger'])} trigger, "
     f"{len(robustness_cases['should_not_trigger'])} opt-out)"
 )
 PY
-pass "0.6.3 metadata, role inventory, native tools, and compatibility separation; default-route/opt-out robustness only (not a general semantic model)"
+pass "0.6.5 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -649,4 +763,4 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$null_id" >/dev/n
 fi
 pass "runtime inspector rejects null sandbox, permission, and cwd metadata"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.3 native Luna V2 checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.5 native Luna V2 checks completed in $tmp_dir"

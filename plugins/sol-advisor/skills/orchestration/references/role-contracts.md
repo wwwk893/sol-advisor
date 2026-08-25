@@ -24,13 +24,28 @@ conflict evidence. There is no silent fallback to another role, model, or effort
 `priority` has the same warning semantics when it is omitted. The primary model and
 effort are not hard gates for using this skill.
 
+## Cognitive decision boundary
+
+Sol primary owns intent interpretation, product and architecture contracts, ownership,
+authorization, risk/rollback and irreversible scope, secret handling, option selection,
+final integration, residual-risk acceptance, and final acceptance. Luna roles gather bounded
+evidence under an exact Sol-owned question or execute a decision-complete packet; they do not make, accept, or
+silently widen those decisions. Explorers return evidence and options, reviewers return
+findings and a recommendation, and Sol makes the final choice.
+
+Delegate only when expected context, time, or quality savings exceed packet and review overhead.
+Keep tiny or tightly coupled judgment primary-only. An evidence-only packet may investigate an
+unresolved Sol-owned question. If an execution prerequisite is unresolved or contradictory, the
+child returns `blocked` with evidence and options.
+
 ## Five role contracts
 
 ### `deep_explorer`
 
 Use for ambiguous ownership, cross-package data flow, architecture-sensitive questions,
 or legacy/generated-path reconciliation. It is read-only by default and returns the
-smallest evidence-backed recommendation; it does not edit product files.
+smallest evidence-backed option set and tradeoffs for Sol to decide; it does not edit
+product files or choose the final architecture.
 
 ### `explorer`
 
@@ -40,9 +55,11 @@ cleanup or speculative changes.
 
 ### `worker`
 
-Use for a settled implementation with an exact owned file set. It is the sole writer
+Use for a decision-complete settled implementation with an exact owned file set. It is the sole writer
 for those files in a shared worktree and is the default product writer. It preserves unrelated
-edits, runs the requested focused checks, and reports actual changed files and evidence.
+edits, runs the requested focused checks, and reports actual changed files and evidence. It may
+choose local implementation details inside the settled contract, but returns `blocked` rather
+than inventing product, architecture, authorization, or risk decisions.
 
 When Git work is explicitly authorized, the native worker records the starting branch, base commit,
 and `git status` before editing; stages only explicitly authorized changed files (the exact owned file set);
@@ -69,6 +86,13 @@ to perform it. Authentication is bounded to the repository-declared test credent
 and only after the primary records the target as non-production and keeps authorization in
 scope. Never expose credential values or inspect stored browser passwords, cookies, local storage, or session storage.
 
+For browser/runtime QA, the tester must load `$browser:control-in-app-browser` and use its
+browser-client tools. The Browser plugin's own `tab.playwright` API is allowed. Do not use
+the standalone `$playwright` or `$playwright-interactive` skills, `npx playwright`, or
+another Playwright CLI path unless the user explicitly requests Playwright for the current
+task. If the Browser plugin or its tools are unavailable, return `blocked` with the exact
+failure; never silently fall back to standalone Playwright.
+
 Use `blocked-auth` only for production/unknown targets, missing or rejected
 credentials, user-controlled MFA/biometric/physical presence, account-lockout risk,
 or a supported authentication attempt that remains blocked. An authentication
@@ -78,7 +102,7 @@ requirement alone is not a blocker.
 
 Use only for a high-risk boundary or an explicit user request for independent review.
 It is behaviorally read-only and uses the reviewer RETURN schema in the compact packet. It must
-not implement its own fix.
+not implement its own fix or accept residual risk; its verdict is a recommendation for Sol.
 
 ## Writable-host observability for read-only roles
 
@@ -117,11 +141,23 @@ Preserve unrelated edits and adapt to concurrent changes.
 INTERFACES
 - <Signatures, schemas, commands, routes, or compatibility behavior.>
 
+SETTLED DECISIONS
+- Intent and observable outcome: <settled decision>
+- Architecture and contracts: <settled decision or not applicable>
+- Scope and ownership: <settled decision>
+- Authorization, risk, and rollback: <settled decision or not applicable>
+- Acceptance evidence: <settled decision>
+For evidence-only work, identify each unresolved choice as an exact Sol-owned question.
+For execution work, if a prerequisite is unresolved or contradictory, do not invent it;
+return `blocked` with the evidence and options Sol needs to decide.
+
 TEST AUTHORIZATION (tester/browser tasks only)
 - Target/environment class: <non-production | production | unknown | not applicable>
 - Credential source: <repository-declared test credential source | not applicable>
 - Allowed auth actions: <login, visible CAPTCHA, accessible test OTP | not applicable>
 - External test-data mutation scope: <explicitly authorized scope | none | not applicable>
+- Browser tool: <$browser:control-in-app-browser browser-client | not applicable>
+- Playwright authorization: <explicit user request | forbidden | not applicable>
 - Escalation conditions: <blocked-auth conditions above | not applicable>
 For other roles, mark this section `not applicable`.
 
@@ -146,7 +182,7 @@ RETURN
 STATUS: complete | partial | blocked
 CHANGES: <actual file-by-file summary, or none>
 VERIFIED: <exact commands and output evidence>
-JUDGMENT CALLS: <decisions, or none>
+JUDGMENT CALLS: <local execution decisions within the settled packet, or none>
 GAPS: <unfinished work or blockers, or none>
 
 REVIEWER RETURN (reviewer only)
