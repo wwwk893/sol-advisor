@@ -1,0 +1,40 @@
+{
+  "suite": "Sol-owned external specialist holdout",
+  "cases": [
+    {
+      "id": "substantial_ui_artifact",
+      "text": "The interaction direction is unsettled; commission the exact configured design specialist to produce a rendered prototype before implementation.",
+      "decision_owner": "sol",
+      "route": "external-specialist",
+      "expected_outcome": "Sol creates an isolated commission, inspects the required artifact, and accepts it before any native worker packet."
+    },
+    {
+      "id": "minor_ui_polish",
+      "text": "Adjust a settled spacing token in one already-inspected component.",
+      "decision_owner": "sol",
+      "route": "primary-or-worker",
+      "expected_outcome": "Do not commission an external artifact; keep the settled micro-edit primary or send the coherent write phase to the native worker."
+    },
+    {
+      "id": "accepted_artifact_implementation",
+      "text": "The rendered design artifact and implementation handoff are accepted; implement the named production files and focused tests.",
+      "decision_owner": "sol",
+      "route": "worker",
+      "expected_outcome": "A native Luna worker owns production implementation; the external specialist receives no production source ownership."
+    },
+    {
+      "id": "exact_external_route_unavailable",
+      "text": "The user requires one exact external runtime and model, but that route is unavailable.",
+      "decision_owner": "sol",
+      "route": "blocked",
+      "expected_outcome": "Report the exact blocker and never silently substitute another provider, model, native role, or permission mode."
+    },
+    {
+      "id": "succeeded_without_artifact",
+      "text": "The external run reports succeeded but does not contain the required deliverable.",
+      "decision_owner": "sol",
+      "route": "blocked",
+      "expected_outcome": "Classify the run as succeeded-no-output and do not accept or issue an implementation packet."
+    }
+  ]
+}
