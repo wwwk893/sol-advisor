@@ -1,5 +1,5 @@
 #!/bin/sh
-# Repository-local verification for Sol Advisor 0.6.5.
+# Repository-local verification for Sol Advisor 0.6.6.
 
 set -eu
 
@@ -71,8 +71,8 @@ manifest_path, *paths = sys.argv[1:]
 doc_paths = paths[:6]
 interface_path, skill_manifest_path, trigger_cases_path, robustness_cases_path, allocation_cases_path, semantic_config_path = paths[6:]
 manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-if manifest.get("version") != "0.6.5":
-    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.5")
+if manifest.get("version") != "0.6.6":
+    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.6")
 prompts = manifest.get("interface", {}).get("defaultPrompt")
 if not isinstance(prompts, list) or not prompts or not all(isinstance(p, str) and p.strip() for p in prompts):
     raise SystemExit("manifest defaultPrompt must be a non-empty list of strings")
@@ -159,6 +159,8 @@ if allocation_cases.get("suite") != "Sol-primary cognitive allocation holdout":
     raise SystemExit("allocation cases have the wrong suite name")
 if not isinstance(allocation_items, list) or not allocation_items:
     raise SystemExit("allocation cases must contain a non-empty cases list")
+if len(allocation_items) != 19:
+    raise SystemExit(f"allocation cases must contain exactly 19 cases, got {len(allocation_items)}")
 allowed_routes = {"primary", "blocked", "deep_explorer", "explorer", "worker", "tester", "reviewer"}
 delegated_routes = allowed_routes - {"primary", "blocked"}
 seen_ids = set()
@@ -197,6 +199,11 @@ required_allocation_ids = {
     "tiny_tightly_coupled_edit",
     "unknown_secret_rotation",
     "contradictory_execution_packet",
+    "cross_repo_write_phase",
+    "exact_named_chrome_route",
+    "generic_browser_plugin_chrome",
+    "exact_named_non_chrome_override",
+    "browser_readiness_unsettled",
 }
 if seen_ids != required_allocation_ids:
     raise SystemExit("allocation cases do not cover the required decision boundaries exactly")
@@ -215,6 +222,11 @@ expected_allocation_routes = {
     "tiny_tightly_coupled_edit": "primary",
     "unknown_secret_rotation": "blocked",
     "contradictory_execution_packet": "blocked",
+    "cross_repo_write_phase": "worker",
+    "exact_named_chrome_route": "tester",
+    "generic_browser_plugin_chrome": "tester",
+    "exact_named_non_chrome_override": "tester",
+    "browser_readiness_unsettled": "blocked",
 }
 actual_allocation_routes = {item["id"]: item["execution_route"] for item in allocation_items}
 if actual_allocation_routes != expected_allocation_routes:
@@ -224,8 +236,8 @@ required_outcome_phrases = {
     "exact_bounded_refactor": ("Sol inspects and accepts",),
     "caller_trace": ("Sol uses the evidence",),
     "known_staging_timeout": ("Sol decides acceptance",),
-    "browser_plugin_qa": ("tester owns browser QA", "no standalone Playwright fallback"),
-    "browser_plugin_unavailable": ("Browser plugin blocker", "never silently fall back to standalone Playwright CLI"),
+    "browser_plugin_qa": ("tester owns browser QA", "durable Chrome route", "no standalone Playwright fallback"),
+    "browser_plugin_unavailable": ("Chrome extension blocker", "Settings -> Computer use", "never silently fall back to standalone Playwright CLI"),
     "authorized_git_closeout": ("Sol verifies",),
     "authorized_jira_resolve": ("blocks and returns to Sol",),
     "production_auth_rollout": ("Sol alone", "accepts or rejects residual risk"),
@@ -234,6 +246,11 @@ required_outcome_phrases = {
     "tiny_tightly_coupled_edit": ("primary-only",),
     "unknown_secret_rotation": ("never delegate",),
     "contradictory_execution_packet": ("no Luna execution role invents",),
+    "cross_repo_write_phase": ("coherent cross-repository write phase", "worker owns"),
+    "exact_named_chrome_route": ("exact named Chrome route", "required acceptance evidence"),
+    "generic_browser_plugin_chrome": ("resolve the generic phrase to Chrome", "readiness and availability", "otherwise block"),
+    "exact_named_non_chrome_override": ("exact non-Chrome override", "selected tool/client"),
+    "browser_readiness_unsettled": ("before the first browser action", "readiness is complete"),
 }
 for item in allocation_items:
     for phrase in required_outcome_phrases[item["id"]]:
@@ -263,9 +280,9 @@ for key, value in (
 if "openai:" not in interface_text or "Native V2" not in interface_text:
     raise SystemExit("interface.yaml missing native V2 openai degradation")
 for key, expected in (
-    ("version", "0.6.5"),
+    ("version", "0.6.6"),
     ("owner", "wwwk893"),
-    ("updated_at", "2026-08-25"),
+    ("updated_at", "2026-08-26"),
     ("lifecycle_stage", "production"),
     ("context_budget_tier", "production"),
     ("review_cadence", "runtime/routing changes"),
@@ -315,6 +332,12 @@ for tool in tools:
 for token in ("decision-complete", "packet and review overhead"):
     if not all(token in document for document in contract_docs):
         raise SystemExit(f"Sol/Luna cognitive allocation contract is missing {token!r}")
+for token in ("coherent write phase", "cross-repository"):
+    if not all(token in document for document in (skill, contracts, native)):
+        raise SystemExit(f"Sol/Luna phase allocation contract is missing {token!r}")
+for token in ("micro-edit", "atomize", "Tool selection does not waive", "weakening acceptance"):
+    if not all(token in document for document in (skill, contracts, native)):
+        raise SystemExit(f"phase/browser acceptance contract is missing {token!r}")
 for token in (
     "SETTLED DECISIONS",
     "Intent and observable outcome",
@@ -323,6 +346,20 @@ for token in (
     "Acceptance evidence",
     "final architecture",
     "accept residual risk",
+    "coherent write phase",
+    "micro-edit",
+    "Tracked test",
+    "tracked proxy/config",
+    "dependency or lockfile",
+    "cross-repository",
+    "bounded purposeful spot-check",
+    "decision-complete transaction",
+    "read before write",
+    "independent authorization flags",
+    "post-write readback",
+    "readiness",
+    "free writer slot",
+    "server lifecycle",
 ):
     if token not in contracts:
         raise SystemExit(f"decision-complete task packet is missing {token!r}")
@@ -437,16 +474,31 @@ if missing_tester_auth_tokens:
         "tester auth contract/task packet tokens are missing: "
         + ", ".join(missing_tester_auth_tokens)
     )
+for token in (
+    "RUNTIME READINESS (tester/browser tasks only)",
+    "Exact target URL/environment",
+    "Candidate code/config state",
+    "Writer slot",
+    "resolved/selected browser tool",
+    "selected/resolved tool",
+    "required extension/client",
+    "Dev-server command/port/health/cleanup owner",
+    "Reversible runtime/dependency prep",
+    "Pre-fix/post-fix steps",
+    "Observable signals",
+):
+    if token.lower() not in contracts.lower():
+        raise SystemExit(f"tester runtime readiness packet is missing {token!r}")
 for token in ("narrowest decisive acceptance subset", "risk or impact warrants"):
     if token not in skill or token not in contracts or token not in native:
         raise SystemExit(f"acceptance subset contract is missing {token!r}")
 for token in ("local, non-browser checks", "browser/runtime QA", "same tester"):
     if not all(token in document for document in contract_docs):
         raise SystemExit(f"tester-owned browser acceptance contract is missing {token!r}")
-for token in ("$browser:control-in-app-browser", "browser-client", "tab.playwright", "Playwright CLI", "silently fall back"):
-    if not all(token in document for document in contract_docs):
+for token in ("$chrome:control-chrome", "Chrome-family", "browser-client", "tab.playwright", "Playwright CLI", "silently fall back", "Settings -> Computer use"):
+    if not all(token in document for document in (skill, contracts, native)):
         raise SystemExit(f"Browser-plugin routing contract is missing {token!r}")
-for token in ("Browser tool", "Playwright authorization"):
+for token in ("Browser tool", "Playwright authorization", "Chrome family selector"):
     if token not in contracts:
         raise SystemExit(f"tester browser task packet is missing {token!r}")
 for token in ("does not require", "app-task", "compatibility", "Terra/Sol"):
@@ -478,6 +530,11 @@ if "default" not in ui.lower() or "native luna v2" not in ui.lower():
 if readme and ("default" not in readme.lower() or "legacy" not in readme.lower()):
     raise SystemExit("README does not separate default and legacy lanes")
 if readme:
+    if "$browser:control-in-app-browser" in readme:
+        raise SystemExit("README retains the retired Browser default route")
+    for route_token in ("$chrome:control-chrome", "generic", "browser plugin", "exact later user selection"):
+        if route_token.lower() not in readme.lower():
+            raise SystemExit(f"README missing browser-routing contract {route_token!r}")
     for requirement in ("python3", "GNU readlink", "POSIX sh", "jq", "shasum"):
         if requirement.lower() not in readme.lower():
             raise SystemExit(f"README missing installer/core requirement {requirement}")
@@ -489,7 +546,7 @@ print(
     f"{len(robustness_cases['should_not_trigger'])} opt-out)"
 )
 PY
-pass "0.6.5 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
+pass "0.6.6 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -763,4 +820,4 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$null_id" >/dev/n
 fi
 pass "runtime inspector rejects null sandbox, permission, and cwd metadata"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.5 native Luna V2 checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.6 native Luna V2 checks completed in $tmp_dir"

@@ -20,9 +20,12 @@ informational and are not a hard stop.
 The primary uses one selected role from this set; choose the smallest role that fits the request.
 Sol keeps intent, architecture/contracts, authorization, risk/rollback, irreversible scope,
 option selection, integration, residual-risk acceptance, and final acceptance. Luna receives an
-exact Sol-owned question for bounded evidence or a decision-complete execution packet. If an
-execution decision is not settled, gather evidence only or return `blocked`; never delegate the
-final choice.
+exact Sol-owned question for bounded evidence or a decision-complete execution packet. Judge
+delegation at a coherent write phase: the related repository mutations needed for the next
+independently acceptable candidate state. `worker` is the default for a decision-complete
+repository write phase; do not atomize multi-file or cross-repository work into tiny steps.
+If an execution decision is not settled, gather evidence only or return `blocked`; never delegate
+the final choice.
 
 `worker` is the default product writer. The tester is the only exception to product writes, and
 only with explicit repair authorization, exact file ownership, a failed relevant check, and no
@@ -30,11 +33,20 @@ active worker writer; then the tester is the sole writer for that owned set. Rea
 be run concurrently when their ownership does not overlap. In a shared worktree, never run two
 writers at once. Three concurrent children is a suggested default ceiling, not a hard limit.
 
+Tracked product tests, proxy/config changes, and dependency or lockfile changes stay in the
+worker's coherent write phase. When an explorer has one exact evidence question, primary works on
+a different decision dimension or performs only a bounded purposeful spot-check; it does not
+independently exhaust the same search space while the explorer is active.
+
 When Git work is authorized for a native worker, record the starting branch, base commit, and
 `git status`; stage only explicitly authorized changed files (the exact owned file set); model
 commit and push as independent authorization flags (they may be granted together); never
 force-push or rewrite history. The primary accepts only after verifying remote SHA, tree, and
 readback acceptance. Git permission does not imply Jira, deploy, or other external mutation.
+Authorized Git or Jira closeout is a decision-complete transaction: read before write; name the
+exact target and action; carry independent authorization flags; state order, stop conditions, and
+rollback; and return post-write readback. The worker performs the whole authorized transaction;
+primary does not drip-feed mechanical approval.
 
 Behaviorally read-only `deep_explorer`, `explorer`, `reviewer`, and read-only `tester` runs must
 capture actual model, effort, sandbox, and permission metadata, including a possible
@@ -53,15 +65,29 @@ tester for focused runtime evidence, and reviewer only for a high-risk boundary 
 explicit user request. A tester does not change product code by default; its only bounded repair/test-only
 exception requires explicit repair authorization, exact file ownership, a failed relevant check, and no active
 worker writer; otherwise return a blocker.
-A small or tightly coupled change stays in the primary session when packet and review overhead
-would exceed the context or quality saved. Do not spawn an execution role until its packet is
+A primary micro-edit may stay in the primary session only when it is one repository, one
+already-inspected owned file, a genuinely atomic settled change, has no active writer or
+overlapping/unclear dirty ownership, and needs at most one narrow local non-browser check, with
+packet and review overhead exceeding saved context. Do not spawn an execution role until its packet is
 decision-complete; an evidence-only role may investigate an exact unresolved Sol-owned question.
-Unresolved or contradictory execution judgment returns to Sol. Browser/runtime QA still
-routes to the tester unless the user explicitly asks the primary to perform it. The tester
-loads `$browser:control-in-app-browser` and uses its browser-client tools; Browser's own
-`tab.playwright` API is allowed. Do not use standalone `$playwright`/`$playwright-interactive`,
-`npx playwright`, or Playwright CLI unless the user explicitly requests Playwright for the
-current task. If Browser is unavailable, return `blocked`; never silently fall back.
+Unresolved or contradictory execution judgment returns to Sol. Current user scope or exact tool
+choice may narrow project defaults; project rules cannot reopen an explicitly excluded path.
+
+Browser/runtime QA routes to one tester end to end through durable `$chrome:control-chrome` with
+the Chrome-family browser-client runtime. An exact current-turn user selection may override it;
+generic “browser plugin” resolves to Chrome. The in-session `tab.playwright` API is allowed, but do
+not substitute `$browser:control-in-app-browser`, Browser, BrowserMCP, Computer Use,
+standalone Playwright or Playwright CLI, or another CLI.
+If the resolved tool or required extension/client is unavailable, return the exact blocker; for the
+default or generic Chrome route, point to Settings -> Computer use. Never silently fall back.
+Tool selection does not waive repository-required acceptance evidence; if the selected route cannot
+produce it, return the incompatibility to Sol instead of changing tools or weakening acceptance.
+Before the first browser action, readiness must settle URL/environment, candidate state, free writer
+slot, resolved browser tool and required extension/client (Chrome route plus extension when the
+default or generic route resolves to Chrome),
+server command/port/health/cleanup, credentials/test-data scope, and pre/post observable signals.
+The worker owns tracked setup; tester owns reversible runtime prep, the resolved browser session,
+server lifecycle, and evidence.
 
 Build a compact packet from
 [role-contracts.md](role-contracts.md). State `fork_turns: none`, exact owned files,

@@ -10,10 +10,12 @@ the highest-value judgment: intent, architecture/contracts, authorization, risk/
 option selection, integration, and acceptance. Runtime-configured Luna agents handle bounded
 evidence under an exact question, or execution after receiving a decision-complete packet. Small work stays primary
 when packet and review overhead would cost more context than delegation saves.
-Browser/runtime QA stays with the same tester using `$browser:control-in-app-browser` and
-its browser-client tools, including its own `tab.playwright` API. Standalone Playwright
-skills or CLI are not a fallback unless the user explicitly requests Playwright; an
-unavailable Browser plugin blocks the browser run, so never silently fall back.
+Browser/runtime QA stays with the same tester using durable/default `$chrome:control-chrome`
+and its Chrome-family browser-client; generic “browser plugin” resolves to Chrome, while an
+exact later user selection may override it. The in-session `tab.playwright` API is allowed.
+Do not substitute Browser, BrowserMCP, Computer Use, or standalone Playwright; an unavailable
+resolved tool or required extension/client blocks the run (for default Chrome, point to
+Settings -> Computer use), so never silently fall back.
 The only route opt-out is an explicit request not to use Sol Advisor or orchestration
 for the current task.
 
@@ -68,10 +70,12 @@ unless the user explicitly authorizes that action and the primary keeps it in sc
 When a child fails, correct the specification and follow up with that same child. The
 primary spot-checks the actual diff and reruns the narrowest decisive acceptance subset
 with local, non-browser checks. It inspects tester evidence and sends gaps back to the same
-tester instead of repeating browser/runtime QA. The tester uses Browser's browser-client
-tools, not the standalone `$playwright`/`$playwright-interactive` skills, `npx playwright`,
-or another Playwright CLI path unless explicitly requested. Browser's own `tab.playwright`
-API remains allowed. It expands validation only when risk or impact warrants it. Lightweight
+tester instead of repeating browser/runtime QA. The tester uses the resolved browser tool's
+browser-client (durable/default `$chrome:control-chrome` with its Chrome extension when Chrome
+is resolved, or the exact later user-selected tool), not the standalone
+`$playwright`/`$playwright-interactive` skills, `npx playwright`, or another Playwright CLI path
+unless explicitly requested. Its in-session `tab.playwright` API remains allowed. It expands
+validation only when risk or impact warrants it. Lightweight
 or tightly coupled changes may be implemented directly in the primary session.
 
 The native lane does not require app-task tools, a nested Codex CLI, or an installed

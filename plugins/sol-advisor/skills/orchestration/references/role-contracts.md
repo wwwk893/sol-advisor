@@ -33,10 +33,23 @@ evidence under an exact Sol-owned question or execute a decision-complete packet
 silently widen those decisions. Explorers return evidence and options, reviewers return
 findings and a recommendation, and Sol makes the final choice.
 
-Delegate only when expected context, time, or quality savings exceed packet and review overhead.
-Keep tiny or tightly coupled judgment primary-only. An evidence-only packet may investigate an
-unresolved Sol-owned question. If an execution prerequisite is unresolved or contradictory, the
-child returns `blocked` with evidence and options.
+Judge delegation at a coherent write phase: the related repository mutations needed to reach the
+next independently acceptable candidate state. Do not judge the whole user task, and do not
+atomize a multi-file or cross-repository write phase into per-line or per-command `tiny` work.
+
+The `worker` is the default for a decision-complete repository write phase. A primary-only
+micro-edit is allowed only when packet and review overhead exceeds the saved context and all of
+these hold: one repository; one already-inspected owned file; a genuinely atomic settled change;
+no active second writer or overlapping/unclear dirty ownership; and at most one narrow writer-side
+local non-browser check. An evidence-only packet may investigate an unresolved Sol-owned question.
+If an execution prerequisite is unresolved or contradictory, the child returns `blocked` with
+evidence and options.
+
+Tracked test changes, tracked proxy/config changes, and dependency or lockfile changes are writer
+work. Running a final narrow local non-browser acceptance subset remains allowed for primary.
+When an explorer has one exact evidence question, primary works on a different decision dimension
+or performs only a bounded purposeful spot-check; do not independently exhaust the same search
+space while the explorer is active.
 
 ## Five role contracts
 
@@ -61,11 +74,21 @@ edits, runs the requested focused checks, and reports actual changed files and e
 choose local implementation details inside the settled contract, but returns `blocked` rather
 than inventing product, architecture, authorization, or risk decisions.
 
+Product code, repository test code, tracked proxy/config changes, and dependency or lockfile changes
+belong to the worker's coherent write phase. A worker may run the focused local checks required to
+reach its next candidate state; primary may rerun only the narrowest final non-browser acceptance
+subset.
+
 When Git work is explicitly authorized, the native worker records the starting branch, base commit,
 and `git status` before editing; stages only explicitly authorized changed files (the exact owned file set);
 models commit and push as independent authorization flags (they may be granted together); never force-push
 or rewrite history. The primary verifies remote SHA, tree, and readback acceptance after any authorized push.
 Git permission does not imply Jira, deploy, or other external mutation.
+
+Any authorized Git or Jira closeout is a decision-complete transaction: read before write; name the
+exact target and action; carry independent authorization flags for commit, push, Jira, and deploy;
+state order, stop conditions, and rollback boundary; then return post-write readback. Permission for
+one mutation never implies another, and the worker does not wait for drip-fed mechanical approval.
 
 ### `tester`
 
@@ -86,12 +109,27 @@ to perform it. Authentication is bounded to the repository-declared test credent
 and only after the primary records the target as non-production and keeps authorization in
 scope. Never expose credential values or inspect stored browser passwords, cookies, local storage, or session storage.
 
-For browser/runtime QA, the tester must load `$browser:control-in-app-browser` and use its
-browser-client tools. The Browser plugin's own `tab.playwright` API is allowed. Do not use
-the standalone `$playwright` or `$playwright-interactive` skills, `npx playwright`, or
-another Playwright CLI path unless the user explicitly requests Playwright for the current
-task. If the Browser plugin or its tools are unavailable, return `blocked` with the exact
-failure; never silently fall back to standalone Playwright.
+For browser/runtime QA, the durable/default tool is only `$chrome:control-chrome`, used by one
+Luna Max tester end to end with its Chrome-family browser-client runtime. The in-session
+`tab.playwright` API is allowed. A later exact user selection for a particular task may override
+this durable route, but a generic phrase such as “browser plugin” resolves to Chrome in this
+configuration. Do not automatically substitute `$browser:control-in-app-browser`, BrowserMCP,
+Computer Use, the standalone `$playwright` or `$playwright-interactive` skills, `npx playwright`,
+or another Playwright CLI path. If the resolved tool or required extension/client is unavailable,
+return `blocked` with the exact failure; for the default or generic Chrome route, point to
+Settings -> Computer use. Never silently fall back.
+Tool selection does not waive repository-required acceptance evidence; if the selected route cannot
+produce it, return the incompatibility to Sol instead of changing tools or weakening acceptance.
+
+Before the tester's first browser action, readiness must establish the exact URL and environment
+class; candidate code/config state; a free writer slot; resolved browser tool and required
+extension/client availability (for the default or generic Chrome route, `$chrome:control-chrome`
+and its Chrome extension); dev-server command, port, health check, and cleanup owner; credential
+source and allowed auth/test-data mutations; and pre-fix/post-fix steps with observable signals.
+Sol settles target, environment, authorization, evidence, and risk. The worker owns required
+tracked setup/config/code. The tester owns reversible runtime preparation, dependency materialization
+that causes no tracked diff, the resolved browser session, dev-server lifecycle, and evidence.
+Missing tracked write or unresolved product judgment returns `blocked` to Sol.
 
 Use `blocked-auth` only for production/unknown targets, missing or rejected
 credentials, user-controlled MFA/biometric/physical presence, account-lockout risk,
@@ -156,9 +194,20 @@ TEST AUTHORIZATION (tester/browser tasks only)
 - Credential source: <repository-declared test credential source | not applicable>
 - Allowed auth actions: <login, visible CAPTCHA, accessible test OTP | not applicable>
 - External test-data mutation scope: <explicitly authorized scope | none | not applicable>
-- Browser tool: <$browser:control-in-app-browser browser-client | not applicable>
+- Browser tool: <resolved/selected browser tool and client; default `$chrome:control-chrome` with Chrome family selector | not applicable>
 - Playwright authorization: <explicit user request | forbidden | not applicable>
 - Escalation conditions: <blocked-auth conditions above | not applicable>
+For other roles, mark this section `not applicable`.
+
+RUNTIME READINESS (tester/browser tasks only)
+- Exact target URL/environment: <exact URL and environment class | not applicable>
+- Candidate code/config state: <candidate revision and tracked setup state | not applicable>
+- Writer slot: <free before browser action | not applicable>
+- Resolved tool/extension: <selected/resolved tool and required extension/client available; default/generic Chrome extension when Chrome is resolved | not applicable>
+- Dev-server command/port/health/cleanup owner: <command; port; health check; owner | not applicable>
+- Reversible runtime/dependency prep: <prep causing no tracked diff | not applicable>
+- Pre-fix/post-fix steps: <reproduction and acceptance steps | not applicable>
+- Observable signals: <requests, UI state, logs, or other evidence | not applicable>
 For other roles, mark this section `not applicable`.
 
 CONSTRAINTS

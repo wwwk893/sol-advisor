@@ -1,52 +1,35 @@
 ---
 name: orchestration
-description: "Use by default unless opted out. Keep simple/status/install/no-subagent work primary-only. Sol owns intent, architecture, risk, integration, and acceptance; Luna Max gets bounded questions or decision-complete execution. Compatibility is explicit."
+description: "Use by default unless opted out. Keep simple/status/install/no-subagent work primary-only. Sol owns intent, architecture, risk, integration, and acceptance; Luna Max gets bounded questions or decision-complete coherent write phases. Compatibility is explicit."
 ---
 
-# Sol Advisor Orchestration
+Before spawning, load [role contracts](references/role-contracts.md) and [native lane](references/native-v2-lane.md).
 
-Sol decides; Luna gathers evidence or executes settled work. Before spawning,
-load normative [role contracts](references/role-contracts.md) and the
-[native lane](references/native-v2-lane.md).
+- **Cognitive budget:** Sol owns intent, contracts, authorization, risk, integration, acceptance.
+  Judge each coherent write phase; `worker` is default for decision-complete writes. Never atomize
+  multi-file or cross-repository work. A primary-only micro-edit requires packet and review overhead
+  exceeding saved context plus one repository, one inspected owned file, atomic settled change,
+  no active/unclear dirty ownership, one narrow local non-browser check. Luna gets an exact
+  evidence question or settled packet; unresolved execution judgment is `blocked`.
+- **Native V2:** choose one `deep_explorer`, `explorer`, `worker`, `tester`, or `reviewer` via
+  `spawn_agent`, `list_agents`, `wait_agent`, `followup_task`, `send_message`, and `interrupt_agent`;
+  keep one writer. Request `agent_type=<role>`, `model=gpt-5.6-luna`, `reasoning_effort=max`,
+  `fork_turns=none`; role availability/accepted spawn are hard prerequisites; no silent fallback.
+  Missing model/effort/priority is `unobservable`; correct twice max with the same child.
+- **Browser/runtime QA:** one tester uses durable/default `$chrome:control-chrome` with its Chrome-family
+  browser-client. Exact later user selection may override it; generic “browser plugin” resolves to Chrome.
+  In-session `tab.playwright` is allowed; do not substitute BrowserMCP, Computer Use, standalone
+  Playwright, or Playwright CLI. If the resolved browser tool/client is unavailable, return the exact
+  blocker and never silently fall back. Default/generic Chrome requires `$chrome:control-chrome` with
+  its Chrome extension and Settings -> Computer use. Tool selection does not waive evidence;
+  incompatibility returns to Sol, not weakening acceptance.
+- **Commit/push:** authorized worker transaction reads before write, names exact targets/actions, carries
+  independent flags, stop/rollback, and readback; Git permission does not imply Jira/deploy. Native V2
+  does not require companion roles; app-task Luna and legacy Terra/Sol are explicit compatibility paths.
 
-## Route
+## Acceptance
 
-- **Default:** load unless the user opts out; activation does not require a child.
-- **Cognitive budget:** Sol owns intent, architecture/contracts, authorization, risk,
-  secrets, option selection, integration, and acceptance. Luna gets an exact Sol-owned evidence
-  question or settled execution packet; unresolved execution judgment is `blocked`. Delegate only
-  when savings exceed packet and review overhead.
-- **Native V2:** choose one role from
-  `deep_explorer`, `explorer`, `worker`, `tester`, or risk-gated `reviewer` via native
-  `spawn_agent`, `list_agents`, `wait_agent`, `followup_task`, `send_message`, and
-  `interrupt_agent`.
-- **Commit/push:** when authorized, use a bounded `worker`; Git permission does not imply
-  Jira, deploy, force-push, or broader authority.
-- **Compatibility:** App-task Luna and legacy Terra/Sol are explicit choices only;
-  native V2 does not require companion roles. Load the
-  [app-task contract](references/luna-task-lane.md) only when explicitly selected.
-
-## Native state machine
-
-`PREPARE → PREFLIGHT → SPAWN → MONITOR → INSPECT → CORRECT → VALIDATE → optional REVIEW → ACCEPT/STOP`
-
-Spawn explicitly with `agent_type=<role>`, `model=gpt-5.6-luna`, `reasoning_effort=max`,
-and `fork_turns=none`. Role availability and accepted Luna/max spawn are hard prerequisites.
-Conflict or fallback is a hard stop; missing model/effort/priority is `unobservable`, never
-silent fallback. Use at most two corrections to the same child. Keep one writer.
-
-Read-only roles capture actual model, effort, sandbox, and permission metadata and compare
-state before and after because host metadata is not OS-enforced isolation. Mutation
-invalidates the result. Browser/runtime QA uses the same tester and
-`$browser:control-in-app-browser` browser-client; its `tab.playwright` is allowed, but
-standalone Playwright CLI requires an explicit request; never silently fall back.
-
-Children preserve unrelated edits and do not commit, push, deploy, delete, upload,
-mutate external services, or handle secrets unless explicitly authorized in scope.
-
-## Acceptance and output
-
-The primary inspects ownership and diff, reruns the narrowest decisive acceptance subset with
-local, non-browser checks, and expands only when risk or impact warrants it. It inspects the
-same tester's browser/runtime QA evidence instead of repeating that work.
-Return `STATUS` (`complete|partial|blocked`), evidence, gaps, and residual risk.
+Readiness is required before the tester's first browser action. Worker owns tracked setup; tester owns
+reversible runtime/server/prep for the resolved browser tool/client (Chrome prep when Chrome resolves)
+and evidence. Primary inspects the same tester's browser/runtime QA evidence and reruns the narrowest decisive acceptance subset
+with local, non-browser checks, expanding when risk or impact warrants it.

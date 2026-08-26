@@ -1,6 +1,6 @@
 {
   "name": "sol-advisor",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "description": "Codex-native workflow that reserves high-value judgment for Sol and delegates decision-complete bounded execution to Luna V2.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/wwwk893/sol-advisor#readme",
@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "Sol Advisor",
     "shortDescription": "Sol owns critical judgment; native Luna V2 executes decision-complete bounded work.",
-    "longDescription": "Sol Advisor routes every request by default. Sol primary keeps intent, architecture/contracts, authorization, risk, option selection, integration, and acceptance; one native Luna V2 role on gpt-5.6-luna at max effort receives an exact bounded evidence question or decision-complete execution. Tiny work stays primary when delegation overhead would cost more context. Authorized commit/push prefers a scoped worker, while app-task Luna and legacy Terra/Sol remain explicit compatibility options.",
+    "longDescription": "Sol Advisor routes every request by default. Sol primary keeps intent, architecture/contracts, authorization, risk, option selection, integration, and acceptance; one native Luna V2 role on gpt-5.6-luna at max effort receives an exact bounded evidence question or a decision-complete coherent repository write phase. Atomic one-file micro-edits may stay primary only when the strict micro-edit boundary holds; multi-file and cross-repository phases go to a worker. Browser/runtime QA uses the durable $chrome:control-chrome route unless the user explicitly selects another tool, while app-task Luna and legacy Terra/Sol remain explicit compatibility options.",
     "developerName": "wwwk893 (maintainer; original author Daniel McAteer)",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],

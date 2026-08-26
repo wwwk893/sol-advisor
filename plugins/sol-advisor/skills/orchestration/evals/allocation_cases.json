@@ -38,16 +38,16 @@
       "text": "Test this UI in a browser and capture runtime evidence; no browser tool was explicitly selected.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Load $browser:control-in-app-browser and use browser-client; its tab.playwright API is allowed, but standalone Playwright CLI is not.",
-      "expected_outcome": "The tester owns browser QA while Sol inspects evidence; no standalone Playwright fallback occurs."
+      "luna_scope": "Use the durable $chrome:control-chrome route with its Chrome-family browser-client; the in-session tab.playwright API is allowed, but standalone Playwright CLI is not.",
+      "expected_outcome": "The tester owns browser QA through the durable Chrome route while Sol inspects evidence; no standalone Playwright fallback occurs."
     },
     {
       "id": "browser_plugin_unavailable",
-      "text": "Run browser QA, but the Codex Browser plugin is unavailable and Playwright was not explicitly authorized.",
+      "text": "Run browser QA, but Chrome or its extension is unavailable and Playwright was not explicitly authorized.",
       "decision_owner": "sol",
       "execution_route": "blocked",
       "luna_scope": "none",
-      "expected_outcome": "Report the Browser plugin blocker; never silently fall back to standalone Playwright CLI."
+      "expected_outcome": "Report the exact Chrome extension blocker and point to Settings -> Computer use; never silently fall back to standalone Playwright CLI."
     },
     {
       "id": "authorized_git_closeout",
@@ -112,6 +112,46 @@
       "execution_route": "blocked",
       "luna_scope": "none",
       "expected_outcome": "Return the contradiction to Sol; no Luna execution role invents the decision."
+    },
+    {
+      "id": "cross_repo_write_phase",
+      "text": "Implement the settled fix and tracked regression tests across the two named repositories while preserving unrelated dirty files.",
+      "decision_owner": "sol",
+      "execution_route": "worker",
+      "luna_scope": "Own the coherent cross-repository write phase, including tracked tests/config changes and focused checks, in one decision-complete packet.",
+      "expected_outcome": "The worker owns the coherent cross-repository write phase; Sol inspects the candidate state and accepts it."
+    },
+    {
+      "id": "exact_named_chrome_route",
+      "text": "Run browser QA with the exact user-selected $chrome:control-chrome tool and capture runtime evidence.",
+      "decision_owner": "sol",
+      "execution_route": "tester",
+      "luna_scope": "Use the explicitly selected $chrome:control-chrome Chrome-family browser-client end to end; do not substitute Browser or standalone Playwright.",
+      "expected_outcome": "The tester uses the exact named Chrome route while Sol inspects evidence; tool choice does not waive required acceptance evidence."
+    },
+    {
+      "id": "generic_browser_plugin_chrome",
+      "text": "The user asks to test the UI with a generic ‘browser plugin’ phrase and no exact browser tool name.",
+      "decision_owner": "sol",
+      "execution_route": "tester",
+      "luna_scope": "Resolve the generic phrase to the durable $chrome:control-chrome route in this configuration and use its Chrome-family browser-client.",
+      "expected_outcome": "First resolve the generic phrase to Chrome; dispatch the tester only after readiness and availability are complete, otherwise block; then use the durable Chrome route while Sol inspects evidence."
+    },
+    {
+      "id": "exact_named_non_chrome_override",
+      "text": "After the durable default is established, the user explicitly selects $browser:control-in-app-browser for this task's browser QA.",
+      "decision_owner": "sol",
+      "execution_route": "tester",
+      "luna_scope": "Retain the exact later non-Chrome selection and use its browser-client and required extension/client end to end; do not reimpose Chrome or use a standalone fallback.",
+      "expected_outcome": "The exact non-Chrome override is retained; readiness checks the selected tool/client before the tester runs QA while Sol inspects evidence."
+    },
+    {
+      "id": "browser_readiness_unsettled",
+      "text": "Run browser QA, but browser readiness is incomplete: the target URL, candidate code state, server health, and cleanup owner are not yet settled.",
+      "decision_owner": "sol",
+      "execution_route": "blocked",
+      "luna_scope": "none",
+      "expected_outcome": "Block before the first browser action until readiness is complete; do not let the tester invent missing environment or product decisions."
     }
   ]
 }
