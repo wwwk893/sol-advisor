@@ -71,24 +71,108 @@ if cases.get("suite") != "Sol-owned external specialist holdout":
     raise SystemExit("external specialist case suite has the wrong name")
 if not isinstance(items, list) or len(items) != 5:
     raise SystemExit("external specialist case suite must contain exactly five cases")
+
+# Keep the holdout descriptions and outcomes reviewable.  A route-only check would let a blank or
+# silently rewritten case continue to pass while preserving the same id-to-route mapping.
 expected = {
-    "substantial_ui_artifact": "external-specialist",
-    "minor_ui_polish": "primary-or-worker",
-    "accepted_artifact_implementation": "worker",
-    "exact_external_route_unavailable": "blocked",
-    "succeeded_without_artifact": "blocked",
+    "substantial_ui_artifact": {
+        "text": "The interaction direction is unsettled; commission the exact configured design specialist to produce a rendered prototype before implementation.",
+        "decision_owner": "sol",
+        "route": "external-specialist",
+        "expected_outcome": "Sol creates an isolated commission, inspects the required artifact, and accepts it before any native worker packet.",
+    },
+    "minor_ui_polish": {
+        "text": "Adjust a settled spacing token in one already-inspected component.",
+        "decision_owner": "sol",
+        "route": "primary-or-worker",
+        "expected_outcome": "Do not commission an external artifact; keep the settled micro-edit primary or send the coherent write phase to the native worker.",
+    },
+    "accepted_artifact_implementation": {
+        "text": "The rendered design artifact and implementation handoff are accepted; implement the named production files and focused tests.",
+        "decision_owner": "sol",
+        "route": "worker",
+        "expected_outcome": "A native Luna worker owns production implementation; the external specialist receives no production source ownership.",
+    },
+    "exact_external_route_unavailable": {
+        "text": "The user requires one exact external runtime and model, but that route is unavailable.",
+        "decision_owner": "sol",
+        "route": "blocked",
+        "expected_outcome": "Report the exact blocker and never silently substitute another provider, model, native role, or permission mode.",
+    },
+    "succeeded_without_artifact": {
+        "text": "The external run reports succeeded but does not contain the required deliverable.",
+        "decision_owner": "sol",
+        "route": "blocked",
+        "expected_outcome": "Classify the run as succeeded-no-output and do not accept or issue an implementation packet.",
+    },
 }
-actual = {item.get("id"): item.get("route") for item in items}
-if actual != expected:
-    raise SystemExit(f"external specialist routes changed: {actual!r}")
-if any(item.get("decision_owner") != "sol" for item in items):
-    raise SystemExit("every external specialist case must retain decision_owner=sol")
+required_case_fields = ("id", "text", "decision_owner", "route", "expected_outcome")
+seen_ids = set()
+seen_texts = set()
+for index, item in enumerate(items):
+    if not isinstance(item, dict):
+        raise SystemExit(f"external specialist case {index} must be an object")
+    missing = [field for field in required_case_fields if field not in item]
+    if missing:
+        raise SystemExit(
+            f"external specialist case {index} is missing critical field(s): {', '.join(missing)}"
+        )
+    for field in required_case_fields:
+        if not isinstance(item[field], str) or not item[field].strip():
+            raise SystemExit(
+                f"external specialist case {index} needs non-empty string {field}"
+            )
+    case_id = item["id"]
+    if case_id in seen_ids:
+        raise SystemExit(f"external specialist cases duplicate id {case_id!r}")
+    if item["text"] in seen_texts:
+        raise SystemExit(f"external specialist cases duplicate text at {case_id!r}")
+    seen_ids.add(case_id)
+    seen_texts.add(item["text"])
+    expected_case = expected.get(case_id)
+    if expected_case is None:
+        raise SystemExit(f"external specialist cases contain unknown id {case_id!r}")
+    for field in required_case_fields[1:]:
+        if item[field] != expected_case[field]:
+            raise SystemExit(
+                f"external specialist case {case_id} changed critical {field}: "
+                f"{item[field]!r} != {expected_case[field]!r}"
+            )
+if seen_ids != set(expected):
+    raise SystemExit("external specialist cases do not cover the required ids exactly")
+
+allocation_items = allocation.get("cases")
+if allocation.get("suite") != "Sol-primary cognitive allocation holdout":
+    raise SystemExit("native allocation fixture has the wrong suite name")
+if not isinstance(allocation_items, list) or not allocation_items:
+    raise SystemExit("native allocation fixture must contain a non-empty cases list")
+allocation_fields = (
+    "id", "text", "decision_owner", "execution_route", "luna_scope", "expected_outcome"
+)
+allocation_ids = set()
+allocation_texts = set()
 
 native_routes = {
     "primary", "blocked", "deep_explorer", "explorer", "worker", "tester", "reviewer"
 }
-for item in allocation.get("cases", []):
-    route = item.get("execution_route")
+for index, item in enumerate(allocation_items):
+    if not isinstance(item, dict):
+        raise SystemExit(f"native allocation case {index} must be an object")
+    missing = [field for field in allocation_fields if field not in item]
+    if missing:
+        raise SystemExit(
+            f"native allocation case {index} is missing critical field(s): {', '.join(missing)}"
+        )
+    for field in allocation_fields:
+        if not isinstance(item[field], str) or not item[field].strip():
+            raise SystemExit(f"native allocation case {index} needs non-empty string {field}")
+    if item["id"] in allocation_ids or item["text"] in allocation_texts:
+        raise SystemExit(f"native allocation case {index} duplicates an id or text")
+    allocation_ids.add(item["id"])
+    allocation_texts.add(item["text"])
+    if item["decision_owner"] != "sol":
+        raise SystemExit(f"native allocation case {item['id']} changed decision_owner")
+    route = item["execution_route"]
     if route not in native_routes:
         raise SystemExit(f"native allocation fixture gained an external/sixth role: {route!r}")
 
