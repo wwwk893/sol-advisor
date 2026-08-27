@@ -109,22 +109,29 @@ to perform it. Authentication is bounded to the repository-declared test credent
 and only after the primary records the target as non-production and keeps authorization in
 scope. Never expose credential values or inspect stored browser passwords, cookies, local storage, or session storage.
 
-For browser/runtime QA, the durable/default tool is only `$chrome:control-chrome`, used by one
-Luna Max tester end to end with its Chrome-family browser-client runtime. The in-session
-`tab.playwright` API is allowed. A later exact user selection for a particular task may override
-this durable route, but a generic phrase such as “browser plugin” resolves to Chrome in this
-configuration. Do not automatically substitute `$browser:control-in-app-browser`, BrowserMCP,
-Computer Use, the standalone `$playwright` or `$playwright-interactive` skills, `npx playwright`,
-or another Playwright CLI path. If the resolved tool or required extension/client is unavailable,
-return `blocked` with the exact failure; for the default or generic Chrome route, point to
-Settings -> Computer use. Never silently fall back.
-Tool selection does not waive repository-required acceptance evidence; if the selected route cannot
-produce it, return the incompatibility to Sol instead of changing tools or weakening acceptance.
+For browser/runtime QA, one Luna Max tester owns the session end to end. An exact user-selected
+browser tool always wins and is preflighted on its own; never silently fall back from that choice.
+For default or generic “browser plugin” QA, probe actual capability rather than infer from OS labels and record the `selected route`,
+availability, and fallback reason before dispatch. Use this ordered ladder: (1) durable
+`$chrome:control-chrome` with its Chrome extension and Chrome-family browser-client (desktop
+preferred); (2) an officially registered `chrome-devtools-mcp` with a supported local stable Chrome,
+headless and isolated (VPS/headless preferred); (3) an already-installed runnable Playwright CLI as
+the last fallback; (4) return `blocked` with the exact missing capability. Do not install or download
+a browser tool during an ordinary tester run. The in-session `tab.playwright` API is allowed; do not
+substitute `$browser:control-in-app-browser`, BrowserMCP, Computer Use, or another unselected tool.
+If the default Chrome extension is unavailable, record that capability as unavailable, point to Settings -> Computer use,
+and continue to the next default route; block only when all default capabilities fail.
+Human-visible auth/CAPTCHA, user-controlled MFA/biometric/physical presence, or an existing
+desktop-session requirement on headless must stop and return to Sol for an explicit desktop Chrome
+reroute; never silently switch, bypass, or inspect stored auth state. Tool selection does not waive
+repository-required acceptance evidence; if the selected route cannot produce it, return the
+incompatibility to Sol instead of changing tools or weakening acceptance.
 
 Before the tester's first browser action, readiness must establish the exact URL and environment
-class; candidate code/config state; a free writer slot; resolved browser tool and required
-extension/client availability (for the default or generic Chrome route, `$chrome:control-chrome`
-and its Chrome extension); dev-server command, port, health check, and cleanup owner; credential
+class; candidate code/config state; a free writer slot; the selected route's client/capability (the
+desktop Chrome route requires `$chrome:control-chrome` and its extension; the headless route requires
+registered `chrome-devtools-mcp` with supported Chrome; the last fallback requires an installed,
+runnable Playwright CLI); dev-server command, port, health check, and cleanup owner; credential
 source and allowed auth/test-data mutations; and pre-fix/post-fix steps with observable signals.
 Sol settles target, environment, authorization, evidence, and risk. The worker owns required
 tracked setup/config/code. The tester owns reversible runtime preparation, dependency materialization
@@ -194,8 +201,8 @@ TEST AUTHORIZATION (tester/browser tasks only)
 - Credential source: <repository-declared test credential source | not applicable>
 - Allowed auth actions: <login, visible CAPTCHA, accessible test OTP | not applicable>
 - External test-data mutation scope: <explicitly authorized scope | none | not applicable>
-- Browser tool: <resolved/selected browser tool and client; default `$chrome:control-chrome` with Chrome family selector | not applicable>
-- Playwright authorization: <explicit user request | forbidden | not applicable>
+- Browser tool: <exact selected tool/client, or capability-first default ladder with Chrome family selector | not applicable>
+- Playwright authorization: <explicit user request, or already-installed last fallback after capability probe | not applicable>
 - Escalation conditions: <blocked-auth conditions above | not applicable>
 For other roles, mark this section `not applicable`.
 
@@ -203,7 +210,8 @@ RUNTIME READINESS (tester/browser tasks only)
 - Exact target URL/environment: <exact URL and environment class | not applicable>
 - Candidate code/config state: <candidate revision and tracked setup state | not applicable>
 - Writer slot: <free before browser action | not applicable>
-- Resolved tool/extension: <selected/resolved tool and required extension/client available; default/generic Chrome extension when Chrome is resolved | not applicable>
+- Resolved/selected browser tool and extension: <selected/resolved tool, required extension/client, and capability probe available | not applicable>
+- Selected route/availability: <route, availability, and fallback reason recorded before browser action | not applicable>
 - Dev-server command/port/health/cleanup owner: <command; port; health check; owner | not applicable>
 - Reversible runtime/dependency prep: <prep causing no tracked diff | not applicable>
 - Pre-fix/post-fix steps: <reproduction and acceptance steps | not applicable>

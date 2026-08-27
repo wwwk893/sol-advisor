@@ -1,8 +1,8 @@
 {
   "name": "orchestration",
-  "version": "0.6.7",
+  "version": "0.6.8",
   "owner": "wwwk893",
-  "updated_at": "2026-08-26",
+  "updated_at": "2026-08-27",
   "status": "active",
   "maturity_tier": "production",
   "lifecycle_stage": "production",
@@ -11,6 +11,6 @@
   "target_platforms": ["openai-codex"],
   "factory_components": ["references", "evals"],
   "input_contract": "Any new user request unless it explicitly opts out; Sol keeps high-value judgment, delegates exact evidence questions, and sends each decision-complete coherent repository write phase in a native V2 packet.",
-  "output_contract": "A Sol-owned decision and acceptance response, optionally backed by a bounded Luna handoff with status, changed files, decisive evidence, gaps, and risk; browser/runtime QA defaults to the durable Chrome route.",
+  "output_contract": "A Sol-owned decision and acceptance response, optionally backed by a bounded Luna handoff with status, changed files, decisive evidence, gaps, and risk; browser/runtime QA records the selected route, capability availability, and fallback reason, using exact user selection first, desktop Chrome extension, registered headless chrome-devtools-mcp, already-installed Playwright CLI, or an exact-capability blocker.",
   "rollback_boundary": "Revert only this skill package's files; do not mutate child worktrees, external services, or user roles."
 }

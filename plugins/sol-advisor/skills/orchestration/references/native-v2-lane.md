@@ -73,21 +73,28 @@ decision-complete; an evidence-only role may investigate an exact unresolved Sol
 Unresolved or contradictory execution judgment returns to Sol. Current user scope or exact tool
 choice may narrow project defaults; project rules cannot reopen an explicitly excluded path.
 
-Browser/runtime QA routes to one tester end to end through durable `$chrome:control-chrome` with
-the Chrome-family browser-client runtime. An exact current-turn user selection may override it;
-generic “browser plugin” resolves to Chrome. The in-session `tab.playwright` API is allowed, but do
-not substitute `$browser:control-in-app-browser`, Browser, BrowserMCP, Computer Use,
-standalone Playwright or Playwright CLI, or another CLI.
-If the resolved tool or required extension/client is unavailable, return the exact blocker; for the
-default or generic Chrome route, point to Settings -> Computer use. Never silently fall back.
-Tool selection does not waive repository-required acceptance evidence; if the selected route cannot
-produce it, return the incompatibility to Sol instead of changing tools or weakening acceptance.
+Browser/runtime QA routes to one tester end to end. An exact current-turn user-selected browser tool
+always wins and is preflighted on its own; never silently fall back away from that selection. For default or
+generic “browser plugin” QA, probe actual capability rather than infer from OS labels and record the `selected route`, availability,
+and fallback reason before dispatch. Use this ordered ladder: (1) durable `$chrome:control-chrome`
+with its Chrome extension and Chrome-family browser-client (desktop preferred); (2) an officially
+registered `chrome-devtools-mcp` with a supported local stable Chrome, headless and isolated
+(VPS/headless preferred); (3) an already-installed runnable Playwright CLI as the last fallback;
+(4) block with the exact missing capability. Do not install or download a browser tool during an
+ordinary tester run. The in-session `tab.playwright` API is allowed; do not substitute
+`$browser:control-in-app-browser`, Browser, BrowserMCP, Computer Use, or another unselected tool.
+If the default Chrome extension is unavailable, record that capability as unavailable, point to Settings -> Computer use,
+and continue to the next default route; block only when all default capabilities fail.
+Human-visible auth/CAPTCHA, user-controlled MFA/biometric/physical presence, or an existing
+desktop-session requirement on headless must stop and return to Sol for an explicit desktop Chrome
+reroute; never silently switch, bypass, or inspect stored auth state. Tool selection does not waive
+repository-required acceptance evidence; if the selected route cannot produce it, return the
+incompatibility to Sol instead of changing tools or weakening acceptance.
 Before the first browser action, readiness must settle URL/environment, candidate state, free writer
-slot, resolved browser tool and required extension/client (Chrome route plus extension when the
-default or generic route resolves to Chrome),
-server command/port/health/cleanup, credentials/test-data scope, and pre/post observable signals.
-The worker owns tracked setup; tester owns reversible runtime prep, the resolved browser session,
-server lifecycle, and evidence.
+slot, resolved browser tool and required extension/client, capability probe, selected route and
+fallback reason, server command/port/health/cleanup, credentials/test-data scope, and pre/post
+observable signals. The worker owns tracked setup; tester owns reversible runtime prep and
+no-diff preinstalled materialization, the resolved browser session, server lifecycle, and evidence.
 
 Build a compact packet from
 [role-contracts.md](role-contracts.md). State `fork_turns: none`, exact owned files,

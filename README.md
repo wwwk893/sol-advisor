@@ -10,12 +10,20 @@ the highest-value judgment: intent, architecture/contracts, authorization, risk/
 option selection, integration, and acceptance. Runtime-configured Luna agents handle bounded
 evidence under an exact question, or execution after receiving a decision-complete packet. Small work stays primary
 when packet and review overhead would cost more context than delegation saves.
-Browser/runtime QA stays with the same tester using durable/default `$chrome:control-chrome`
-and its Chrome-family browser-client; generic “browser plugin” resolves to Chrome, while an
-exact later user selection may override it. The in-session `tab.playwright` API is allowed.
-Do not substitute Browser, BrowserMCP, Computer Use, or standalone Playwright; an unavailable
-resolved tool or required extension/client blocks the run (for default Chrome, point to
-Settings -> Computer use), so never silently fall back.
+Browser/runtime QA stays with one tester. An exact later user selection (user-selected browser tool)
+always wins, is preflighted on its own, and never falls back. For default or generic “browser plugin”
+QA, probe actual capability rather than infer from OS labels, record the `selected route`, availability,
+and fallback reason, then use this ladder: (1) `$chrome:control-chrome` with its Chrome extension and
+Chrome-family browser-client (desktop preferred); (2) an officially registered `chrome-devtools-mcp`
+with supported local stable Chrome, headless and isolated (VPS/headless preferred); (3) an
+already-installed runnable Playwright CLI as the last fallback; (4) block with the exact missing
+capability. Do not install or download a browser tool during an ordinary tester run. The in-session
+`tab.playwright` API is allowed; do not substitute Browser, BrowserMCP, Computer Use, or another
+unselected tool. If the default Chrome extension is unavailable, record that capability as unavailable,
+point to Settings -> Computer use, and continue to the next default route; block only when all default
+capabilities fail. Human-visible auth/CAPTCHA, user-controlled MFA/biometric/physical presence, or an
+existing desktop-session requirement on headless must stop and return to Sol for an explicit desktop
+Chrome reroute; never silently switch, bypass, or inspect stored auth state.
 The only route opt-out is an explicit request not to use Sol Advisor or orchestration
 for the current task.
 
@@ -69,14 +77,16 @@ unrelated edits and may not commit, push, deploy, delete, upload, or handle secr
 unless the user explicitly authorizes that action and the primary keeps it in scope.
 When a child fails, correct the specification and follow up with that same child. The
 primary spot-checks the actual diff and reruns the narrowest decisive acceptance subset
-with local, non-browser checks. It inspects tester evidence and sends gaps back to the same
-tester instead of repeating browser/runtime QA. The tester uses the resolved browser tool's
-browser-client (durable/default `$chrome:control-chrome` with its Chrome extension when Chrome
-is resolved, or the exact later user-selected tool), not the standalone
-`$playwright`/`$playwright-interactive` skills, `npx playwright`, or another Playwright CLI path
-unless explicitly requested. Its in-session `tab.playwright` API remains allowed. It expands
-validation only when risk or impact warrants it. Lightweight
-or tightly coupled changes may be implemented directly in the primary session.
+with local, non-browser checks. It inspects tester evidence and sends gaps back to the same tester
+instead of repeating browser/runtime QA. The tester uses the exact later user-selected tool when one
+is named; otherwise it probes capability, records the selected route and fallback reason, and uses the
+ordered desktop Chrome extension, registered headless `chrome-devtools-mcp`, or already-installed
+runnable Playwright CLI ladder. Its in-session `tab.playwright` API remains allowed, but no unselected
+tool or auto-install is permitted. Human-visible auth, CAPTCHA, MFA, biometric, physical-presence, or
+existing-desktop-session requirements on headless stop the run and return to Sol for an explicit desktop
+Chrome reroute without bypassing or inspecting stored auth state. It expands validation only when risk
+or impact warrants it. Lightweight or tightly coupled changes may be implemented directly in the primary
+session.
 
 The native lane does not require app-task tools, a nested Codex CLI, or an installed
 companion role. Do not install or remove roles automatically.

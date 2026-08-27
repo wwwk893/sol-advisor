@@ -1,5 +1,5 @@
 #!/bin/sh
-# Repository-local verification for Sol Advisor 0.6.7.
+# Repository-local verification for Sol Advisor 0.6.8.
 
 set -eu
 
@@ -74,8 +74,8 @@ manifest_path, *paths = sys.argv[1:]
 doc_paths = paths[:6]
 interface_path, skill_manifest_path, trigger_cases_path, robustness_cases_path, allocation_cases_path, semantic_config_path = paths[6:]
 manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-if manifest.get("version") != "0.6.7":
-    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.7")
+if manifest.get("version") != "0.6.8":
+    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.8")
 prompts = manifest.get("interface", {}).get("defaultPrompt")
 if not isinstance(prompts, list) or not prompts or not all(isinstance(p, str) and p.strip() for p in prompts):
     raise SystemExit("manifest defaultPrompt must be a non-empty list of strings")
@@ -162,8 +162,8 @@ if allocation_cases.get("suite") != "Sol-primary cognitive allocation holdout":
     raise SystemExit("allocation cases have the wrong suite name")
 if not isinstance(allocation_items, list) or not allocation_items:
     raise SystemExit("allocation cases must contain a non-empty cases list")
-if len(allocation_items) != 19:
-    raise SystemExit(f"allocation cases must contain exactly 19 cases, got {len(allocation_items)}")
+if len(allocation_items) != 25:
+    raise SystemExit(f"allocation cases must contain exactly 25 cases, got {len(allocation_items)}")
 allowed_routes = {"primary", "blocked", "deep_explorer", "explorer", "worker", "tester", "reviewer"}
 delegated_routes = allowed_routes - {"primary", "blocked"}
 seen_ids = set()
@@ -194,6 +194,12 @@ required_allocation_ids = {
     "known_staging_timeout",
     "browser_plugin_qa",
     "browser_plugin_unavailable",
+    "browser_desktop_chrome_capability",
+    "browser_vps_headless_chrome_devtools",
+    "browser_devtools_playwright_fallback",
+    "browser_no_capabilities_blocked",
+    "browser_exact_named_tool_no_fallback",
+    "browser_headless_human_auth_escalation",
     "authorized_git_closeout",
     "authorized_jira_resolve",
     "production_auth_rollout",
@@ -217,6 +223,12 @@ expected_allocation_routes = {
     "known_staging_timeout": "tester",
     "browser_plugin_qa": "tester",
     "browser_plugin_unavailable": "blocked",
+    "browser_desktop_chrome_capability": "tester",
+    "browser_vps_headless_chrome_devtools": "tester",
+    "browser_devtools_playwright_fallback": "tester",
+    "browser_no_capabilities_blocked": "blocked",
+    "browser_exact_named_tool_no_fallback": "blocked",
+    "browser_headless_human_auth_escalation": "tester",
     "authorized_git_closeout": "worker",
     "authorized_jira_resolve": "worker",
     "production_auth_rollout": "reviewer",
@@ -239,8 +251,14 @@ required_outcome_phrases = {
     "exact_bounded_refactor": ("Sol inspects and accepts",),
     "caller_trace": ("Sol uses the evidence",),
     "known_staging_timeout": ("Sol decides acceptance",),
-    "browser_plugin_qa": ("tester owns browser QA", "durable Chrome route", "no standalone Playwright fallback"),
-    "browser_plugin_unavailable": ("Chrome extension blocker", "Settings -> Computer use", "never silently fall back to standalone Playwright CLI"),
+    "browser_plugin_qa": ("tester owns browser QA", "capability-first routing", "selected route", "fallback reason"),
+    "browser_plugin_unavailable": ("exact per-capability evidence", "Settings -> Computer use", "do not install, upgrade, or silently switch routes"),
+    "browser_desktop_chrome_capability": ("desktop Chrome route first", "selected route", "availability"),
+    "browser_vps_headless_chrome_devtools": ("VPS/headless Chrome DevTools MCP route", "selected route", "fallback reason"),
+    "browser_devtools_playwright_fallback": ("already-installed Playwright CLI", "last fallback", "fallback reason"),
+    "browser_no_capabilities_blocked": ("exact missing capabilities", "block", "do not install"),
+    "browser_exact_named_tool_no_fallback": ("exact named tool", "no fallback", "block"),
+    "browser_headless_human_auth_escalation": ("Escalate human-visible authentication", "desktop Chrome", "never bypass"),
     "authorized_git_closeout": ("Sol verifies",),
     "authorized_jira_resolve": ("blocks and returns to Sol",),
     "production_auth_rollout": ("Sol alone", "accepts or rejects residual risk"),
@@ -250,9 +268,9 @@ required_outcome_phrases = {
     "unknown_secret_rotation": ("never delegate",),
     "contradictory_execution_packet": ("no Luna execution role invents",),
     "cross_repo_write_phase": ("coherent cross-repository write phase", "worker owns"),
-    "exact_named_chrome_route": ("exact named Chrome route", "required acceptance evidence"),
-    "generic_browser_plugin_chrome": ("resolve the generic phrase to Chrome", "readiness and availability", "otherwise block"),
-    "exact_named_non_chrome_override": ("exact non-Chrome override", "selected tool/client"),
+    "exact_named_chrome_route": ("exact named Chrome route", "no fallback", "required acceptance evidence"),
+    "generic_browser_plugin_chrome": ("capability probing", "selected route", "fallback reason", "otherwise block"),
+    "exact_named_non_chrome_override": ("exact non-Chrome override", "no fallback", "selected tool/client"),
     "browser_readiness_unsettled": ("before the first browser action", "readiness is complete"),
 }
 for item in allocation_items:
@@ -283,9 +301,9 @@ for key, value in (
 if "openai:" not in interface_text or "Native V2" not in interface_text:
     raise SystemExit("interface.yaml missing native V2 openai degradation")
 for key, expected in (
-    ("version", "0.6.7"),
+    ("version", "0.6.8"),
     ("owner", "wwwk893"),
-    ("updated_at", "2026-08-26"),
+    ("updated_at", "2026-08-27"),
     ("lifecycle_stage", "production"),
     ("context_budget_tier", "production"),
     ("review_cadence", "runtime/routing changes"),
@@ -498,9 +516,35 @@ for token in ("narrowest decisive acceptance subset", "risk or impact warrants")
 for token in ("local, non-browser checks", "browser/runtime QA", "same tester"):
     if not all(token in document for document in contract_docs):
         raise SystemExit(f"tester-owned browser acceptance contract is missing {token!r}")
-for token in ("$chrome:control-chrome", "Chrome-family", "browser-client", "tab.playwright", "Playwright CLI", "silently fall back", "Settings -> Computer use"):
-    if not all(token in document for document in (skill, contracts, native)):
-        raise SystemExit(f"Browser-plugin routing contract is missing {token!r}")
+for token in (
+    "$chrome:control-chrome",
+    "Chrome-family",
+    "browser-client",
+    "Playwright CLI",
+    "silently fall back",
+    "chrome-devtools-mcp",
+    "selected route",
+    "availability",
+    "fallback reason",
+    "already-installed",
+    "last fallback",
+    "headless",
+    "isolated",
+):
+    if token not in skill:
+        raise SystemExit(f"SKILL browser-routing summary is missing {token!r}")
+for token in (
+    "tab.playwright",
+    "Settings -> Computer use",
+    "Human-visible",
+    "stored auth state",
+    "explicit desktop Chrome",
+    "all default capabilities fail",
+    "never silently switch",
+    "bypass",
+):
+    if not all(token.lower() in document.lower() for document in (contracts, native)):
+        raise SystemExit(f"Detailed browser/auth routing contract is missing {token!r}")
 for token in ("Browser tool", "Playwright authorization", "Chrome family selector"):
     if token not in contracts:
         raise SystemExit(f"tester browser task packet is missing {token!r}")
@@ -549,7 +593,7 @@ print(
     f"{len(robustness_cases['should_not_trigger'])} opt-out)"
 )
 PY
-pass "0.6.7 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
+pass "0.6.8 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -823,4 +867,4 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$null_id" >/dev/n
 fi
 pass "runtime inspector rejects null sandbox, permission, and cwd metadata"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.7 native Luna V2 checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.8 native Luna V2 checks completed in $tmp_dir"

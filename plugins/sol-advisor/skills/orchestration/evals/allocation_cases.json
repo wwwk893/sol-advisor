@@ -35,19 +35,67 @@
     },
     {
       "id": "browser_plugin_qa",
-      "text": "Test this UI in a browser and capture runtime evidence; no browser tool was explicitly selected.",
+      "text": "Test this UI in a browser and capture runtime evidence; no browser tool was explicitly selected, so capability must be probed.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Use the durable $chrome:control-chrome route with its Chrome-family browser-client; the in-session tab.playwright API is allowed, but standalone Playwright CLI is not.",
-      "expected_outcome": "The tester owns browser QA through the durable Chrome route while Sol inspects evidence; no standalone Playwright fallback occurs."
+      "luna_scope": "Probe actual capabilities and record the selected route, availability, and fallback reason; use the ordered desktop Chrome, registered headless chrome-devtools-mcp, then already-installed Playwright CLI ladder.",
+      "expected_outcome": "The tester owns browser QA while Sol inspects evidence; capability-first routing records the selected route and any fallback reason without auto-installing tools."
     },
     {
       "id": "browser_plugin_unavailable",
-      "text": "Run browser QA, but Chrome or its extension is unavailable and Playwright was not explicitly authorized.",
+      "text": "Run browser QA: the desktop Chrome extension is unavailable, registered chrome-devtools-mcp exists but local Chrome is missing or unsupported, and no installed runnable Playwright CLI is available.",
       "decision_owner": "sol",
       "execution_route": "blocked",
       "luna_scope": "none",
-      "expected_outcome": "Report the exact Chrome extension blocker and point to Settings -> Computer use; never silently fall back to standalone Playwright CLI."
+      "expected_outcome": "Block with exact per-capability evidence for the unavailable desktop extension, unsupported/missing local Chrome, and absent Playwright CLI; point to Settings -> Computer use and do not install, upgrade, or silently switch routes during an ordinary run."
+    },
+    {
+      "id": "browser_desktop_chrome_capability",
+      "text": "Default browser QA finds the desktop Chrome extension and Chrome-family browser-client available.",
+      "decision_owner": "sol",
+      "execution_route": "tester",
+      "luna_scope": "Use $chrome:control-chrome with the available Chrome extension and Chrome-family browser-client; record desktop Chrome as the selected route before browser action.",
+      "expected_outcome": "Select the desktop Chrome route first, record the selected route and its availability/evidence, and keep Sol acceptance; do not probe lower routes once this capability is ready."
+    },
+    {
+      "id": "browser_vps_headless_chrome_devtools",
+      "text": "Default browser QA runs on a VPS/headless host with supported stable Chrome and registered chrome-devtools-mcp available.",
+      "decision_owner": "sol",
+      "execution_route": "tester",
+      "luna_scope": "Use the officially registered chrome-devtools-mcp with supported local stable Chrome in headless isolated mode; record VPS/headless selection and readiness evidence.",
+      "expected_outcome": "Select the VPS/headless Chrome DevTools MCP route when desktop Chrome is unavailable, record the selected route, availability, and fallback reason, and keep Sol acceptance."
+    },
+    {
+      "id": "browser_devtools_playwright_fallback",
+      "text": "Default browser QA has no usable Chrome extension or Chrome DevTools MCP, but an already-installed runnable Playwright CLI is available.",
+      "decision_owner": "sol",
+      "execution_route": "tester",
+      "luna_scope": "Verify the existing Playwright CLI is installed and runnable, then use it only as the last fallback; do not run npx, download browsers, or install a tool.",
+      "expected_outcome": "Use the already-installed Playwright CLI only as the last fallback after higher routes are unavailable, record the selected route and fallback reason, and preserve required evidence."
+    },
+    {
+      "id": "browser_no_capabilities_blocked",
+      "text": "Default browser QA finds no available Chrome extension, registered Chrome DevTools MCP, or runnable installed Playwright CLI.",
+      "decision_owner": "sol",
+      "execution_route": "blocked",
+      "luna_scope": "none",
+      "expected_outcome": "block with the exact missing capabilities and return to Sol; do not install, download, or silently switch browser tools."
+    },
+    {
+      "id": "browser_exact_named_tool_no_fallback",
+      "text": "The user explicitly selects a named browser tool for this task and that tool is unavailable.",
+      "decision_owner": "sol",
+      "execution_route": "blocked",
+      "luna_scope": "none",
+      "expected_outcome": "Honor the exact named tool, report its availability failure, and block with no fallback to Chrome DevTools MCP or Playwright CLI."
+    },
+    {
+      "id": "browser_headless_human_auth_escalation",
+      "text": "A headless browser route reaches human-visible auth/CAPTCHA, user-controlled MFA/biometric, physical presence, or an existing desktop-session requirement.",
+      "decision_owner": "sol",
+      "execution_route": "tester",
+      "luna_scope": "Stop headless automation at the human-auth boundary and return the exact escalation to Sol for a desktop Chrome route; do not bypass or inspect stored auth state.",
+      "expected_outcome": "Escalate human-visible authentication to desktop Chrome, preserve evidence boundaries, and never bypass MFA/CAPTCHA or inspect stored auth state."
     },
     {
       "id": "authorized_git_closeout",
@@ -126,24 +174,24 @@
       "text": "Run browser QA with the exact user-selected $chrome:control-chrome tool and capture runtime evidence.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Use the explicitly selected $chrome:control-chrome Chrome-family browser-client end to end; do not substitute Browser or standalone Playwright.",
-      "expected_outcome": "The tester uses the exact named Chrome route while Sol inspects evidence; tool choice does not waive required acceptance evidence."
+      "luna_scope": "Use the explicitly selected $chrome:control-chrome Chrome-family browser-client end to end; preflight it on its own and do not substitute another route or standalone Playwright.",
+      "expected_outcome": "The tester uses the exact named Chrome route while Sol inspects evidence; exact tool choice wins with no fallback and does not waive required acceptance evidence."
     },
     {
       "id": "generic_browser_plugin_chrome",
-      "text": "The user asks to test the UI with a generic ‘browser plugin’ phrase and no exact browser tool name.",
+      "text": "The user asks to test the UI with a generic ‘browser plugin’ phrase and no exact browser tool name, so capability-first routing applies.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Resolve the generic phrase to the durable $chrome:control-chrome route in this configuration and use its Chrome-family browser-client.",
-      "expected_outcome": "First resolve the generic phrase to Chrome; dispatch the tester only after readiness and availability are complete, otherwise block; then use the durable Chrome route while Sol inspects evidence."
+      "luna_scope": "Probe actual capabilities, then use desktop $chrome:control-chrome first, registered headless chrome-devtools-mcp second, or an already-installed runnable Playwright CLI last.",
+      "expected_outcome": "Resolve the generic phrase through capability probing; record readiness, selected route, availability, and fallback reason, otherwise block; Sol inspects evidence."
     },
     {
       "id": "exact_named_non_chrome_override",
       "text": "After the durable default is established, the user explicitly selects $browser:control-in-app-browser for this task's browser QA.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Retain the exact later non-Chrome selection and use its browser-client and required extension/client end to end; do not reimpose Chrome or use a standalone fallback.",
-      "expected_outcome": "The exact non-Chrome override is retained; readiness checks the selected tool/client before the tester runs QA while Sol inspects evidence."
+      "luna_scope": "Retain the exact later non-Chrome selection and use its browser-client and required extension/client end to end; preflight it on its own and do not reimpose Chrome or use a fallback.",
+      "expected_outcome": "The exact non-Chrome override is retained with no fallback; readiness checks the selected tool/client before the tester runs QA while Sol inspects evidence."
     },
     {
       "id": "browser_readiness_unsettled",
