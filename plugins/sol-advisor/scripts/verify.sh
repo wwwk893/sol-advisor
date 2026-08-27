@@ -1,5 +1,5 @@
 #!/bin/sh
-# Repository-local verification for Sol Advisor 0.6.6.
+# Repository-local verification for Sol Advisor 0.6.7.
 
 set -eu
 
@@ -15,6 +15,7 @@ plugin_dir=$(CDPATH= cd "$script_dir/.." && pwd) || exit 1
 repo_dir=$(CDPATH= cd "$plugin_dir/../.." && pwd) || exit 1
 installer=$script_dir/install-agents.sh
 runtime_inspector=$script_dir/inspect-agent-runtime.sh
+external_verifier=$script_dir/verify-external-specialist.sh
 templates=$plugin_dir/agents
 manifest=$plugin_dir/.codex-plugin/plugin.json
 skill=$plugin_dir/skills/orchestration/SKILL.md
@@ -30,11 +31,13 @@ robustness_cases=$plugin_dir/skills/orchestration/evals/robustness_cases.json
 allocation_cases=$plugin_dir/skills/orchestration/evals/allocation_cases.json
 semantic_config=$plugin_dir/skills/orchestration/evals/semantic_config.json
 
-for required in "$installer" "$runtime_inspector" "$manifest" "$skill" "$contracts" \
+for required in "$installer" "$runtime_inspector" "$external_verifier" "$manifest" "$skill" "$contracts" \
   "$native_contract" "$luna_contract" "$ui" "$interface" "$skill_manifest" \
   "$trigger_cases" "$robustness_cases" "$allocation_cases" "$semantic_config"; do
   test -f "$required" || fail "required file missing: $required"
 done
+
+sh "$external_verifier"
 
 readme_arg=$readme
 if [ ! -f "$readme" ]; then
@@ -71,8 +74,8 @@ manifest_path, *paths = sys.argv[1:]
 doc_paths = paths[:6]
 interface_path, skill_manifest_path, trigger_cases_path, robustness_cases_path, allocation_cases_path, semantic_config_path = paths[6:]
 manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-if manifest.get("version") != "0.6.6":
-    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.6")
+if manifest.get("version") != "0.6.7":
+    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.7")
 prompts = manifest.get("interface", {}).get("defaultPrompt")
 if not isinstance(prompts, list) or not prompts or not all(isinstance(p, str) and p.strip() for p in prompts):
     raise SystemExit("manifest defaultPrompt must be a non-empty list of strings")
@@ -280,7 +283,7 @@ for key, value in (
 if "openai:" not in interface_text or "Native V2" not in interface_text:
     raise SystemExit("interface.yaml missing native V2 openai degradation")
 for key, expected in (
-    ("version", "0.6.6"),
+    ("version", "0.6.7"),
     ("owner", "wwwk893"),
     ("updated_at", "2026-08-26"),
     ("lifecycle_stage", "production"),
@@ -546,7 +549,7 @@ print(
     f"{len(robustness_cases['should_not_trigger'])} opt-out)"
 )
 PY
-pass "0.6.6 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
+pass "0.6.7 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -820,4 +823,4 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$null_id" >/dev/n
 fi
 pass "runtime inspector rejects null sandbox, permission, and cwd metadata"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.6 native Luna V2 checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.7 native Luna V2 checks completed in $tmp_dir"

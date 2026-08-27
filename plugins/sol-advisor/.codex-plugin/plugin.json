@@ -1,6 +1,6 @@
 {
   "name": "sol-advisor",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "description": "Codex-native workflow that reserves high-value judgment for Sol and delegates decision-complete bounded execution to Luna V2.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/wwwk893/sol-advisor#readme",
