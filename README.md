@@ -8,8 +8,10 @@ an exact-scope packet, reducing primary-context token use. Other engineering wor
 benefits from delegation uses the native multi-agent V2 runtime. The primary session owns
 the highest-value judgment: intent, architecture/contracts, authorization, risk/rollback,
 option selection, integration, and acceptance. Runtime-configured Luna agents handle bounded
-evidence under an exact question, or execution after receiving a decision-complete packet. Small work stays primary
-when packet and review overhead would cost more context than delegation saves.
+evidence under an exact question or execution after a decision-complete packet. For non-trivial work
+with an unknown runtime path, ownership, or caller flow, start evidence-only reconnaissance: `explorer` for a
+bounded trace; `deep_explorer` for cross-package/cross-repository, competing, legacy-generated, or architecture-sensitive
+paths. The primary frames the question without exhausting the same search; Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known; packet and review overhead can keep known paths primary/worker.
 Browser/runtime QA stays with one tester. An exact later user selection (user-selected browser tool)
 always wins, is preflighted on its own, and never falls back. For default or generic “browser plugin”
 QA, probe actual capability rather than infer from OS labels, record the `selected route`, availability,

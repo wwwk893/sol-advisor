@@ -33,6 +33,9 @@ active worker writer; then the tester is the sole writer for that owned set. Rea
 be run concurrently when their ownership does not overlap. In a shared worktree, never run two
 writers at once. Three concurrent children is a suggested default ceiling, not a hard limit.
 
+Detailed role, reconnaissance, packet, and return contracts live in
+[role-contracts.md](role-contracts.md).
+
 Tracked product tests, proxy/config changes, and dependency or lockfile changes stay in the
 worker's coherent write phase. When an explorer has one exact evidence question, primary works on
 a different decision dimension or performs only a bounded purposeful spot-check; it does not
@@ -56,11 +59,32 @@ the result.
 
 ## Lifecycle
 
+### TRIAGE
+
+The primary interprets the user goal, authorization and safety boundary, explicit constraints,
+and acceptance intent. It records what is already known and which repository facts remain unknown.
+Triage may use bounded seed inspection, but it does not map a repository-wide call graph or read a
+long chain of candidate implementations merely to make the evidence question look complete.
+
+### RECON
+
+When a non-trivial repository task still has an unknown runtime path, implementation owner,
+caller/callee chain, relevant tests/config, generated or legacy path, or cross-package flow, dispatch
+an evidence-only `explorer` or `deep_explorer` before broad primary exploration. Use `explorer` for
+one bounded subsystem trace and `deep_explorer` for ambiguous ownership, competing paths,
+cross-package/cross-repository flow, or architecture-sensitive reconciliation. Orthogonal read-only
+questions may run concurrently within the ordinary child ceiling.
+
+Use the packet and return schema in [role-contracts.md](role-contracts.md). After it returns, Sol
+starts with `ANSWER` and `READ NEXT`, then spot-checks cited regions rather than replaying the broad
+search. Incomplete or contradictory handoffs go back to the same child. Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known; unresolved tests/config, generated/legacy paths, or cross-package flow still
+trigger RECON when broad search is required.
+
 ### PREPARE
 
-The primary resolves intent, architecture/contracts, authorization, risk/rollback,
-irreversible scope, ownership, option selection, and acceptance evidence.
-Choose the smallest role: explorers for questions, worker for settled implementation,
+After any required reconnaissance, the primary resolves intent, architecture/contracts,
+authorization, risk/rollback, irreversible scope, ownership, option selection, and acceptance evidence.
+Choose the smallest role: explorers for unresolved evidence questions, worker for settled implementation,
 tester for focused runtime evidence, and reviewer only for a high-risk boundary or an
 explicit user request. A tester does not change product code by default; its only bounded repair/test-only
 exception requires explicit repair authorization, exact file ownership, a failed relevant check, and no active
@@ -139,19 +163,21 @@ waiting may be longer when the child is making progress.
 
 Read the handoff, then inspect the actual worktree, complete diff, changed-file scope,
 and relevant generated/runtime artifacts in the primary session. Treat child claims as
-untrusted until the primary verifies the actual artifacts. For tester-owned browser/runtime
-QA, inspect the evidence and send gaps back to the same tester instead of reproducing the
-browser session.
+untrusted until the primary verifies the actual artifacts. For explorer handoffs, begin with
+`ANSWER` and `READ NEXT`, inspect the cited decisive regions, and check material observations
+without recreating the repository-wide search. For tester-owned browser/runtime QA, inspect the
+evidence and send gaps back to the same tester instead of reproducing the browser session.
 
 ### CORRECT
 
 If the result is partial or a check fails, issue a precise `followup_task` (or
 `send_message`) to the same child with the failing evidence and required correction.
-Record machine-readable `correction_round: 0` for the initial packet and `1` or `2` for
-corrections. Beyond two requires a recorded `continuation_reason`; record `user_direction` as the
-quoted direction when present, otherwise `none`. Continue beyond two only for clear progress or
-explicit user direction. Never create a replacement child merely to reset the counter or dodge an
-unresolved correction.
+For an explorer handoff, name the missing path, unsupported claim, unresolved contradiction, or
+coverage gap rather than starting a replacement search. Record machine-readable
+`correction_round: 0` for the initial packet and `1` or `2` for corrections. Beyond two requires a
+recorded `continuation_reason`; record `user_direction` as the quoted direction when present,
+otherwise `none`. Continue beyond two only for clear progress or explicit user direction. Never
+create a replacement child merely to reset the counter or dodge an unresolved correction.
 
 ### VALIDATE
 

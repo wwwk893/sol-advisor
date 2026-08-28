@@ -247,9 +247,16 @@ actual_allocation_routes = {item["id"]: item["execution_route"] for item in allo
 if actual_allocation_routes != expected_allocation_routes:
     raise SystemExit("allocation cases changed a required Sol/Luna execution route")
 required_outcome_phrases = {
-    "ambiguous_api_ui_contract": ("No implementation packet", "Sol resolves"),
-    "exact_bounded_refactor": ("Sol inspects and accepts",),
-    "caller_trace": ("Sol uses the evidence",),
+    "ambiguous_api_ui_contract": (
+        "No implementation packet",
+        "Sol resolves",
+        "primary does not exhaust the same repository search first",
+    ),
+    "exact_bounded_refactor": ("Sol inspects and accepts", "without first spawning an explorer"),
+    "caller_trace": (
+        "Sol uses the evidence",
+        "primary seed inspection frames the question but does not perform the repository-wide trace itself",
+    ),
     "known_staging_timeout": ("Sol decides acceptance",),
     "browser_plugin_qa": ("tester owns browser QA", "capability-first routing", "selected route", "fallback reason"),
     "browser_plugin_unavailable": ("exact per-capability evidence", "Settings -> Computer use", "do not install, upgrade, or silently switch routes"),
@@ -264,7 +271,11 @@ required_outcome_phrases = {
     "production_auth_rollout": ("Sol alone", "accepts or rejects residual risk"),
     "official_dependency_research": ("Sol chooses",),
     "tiny_status_answer": ("primary-only",),
-    "tiny_tightly_coupled_edit": ("primary-only",),
+    "tiny_tightly_coupled_edit": (
+        "primary-only",
+        "proactive reconnaissance is skipped",
+        "no repository evidence question remains",
+    ),
     "unknown_secret_rotation": ("never delegate",),
     "contradictory_execution_packet": ("no Luna execution role invents",),
     "cross_repo_write_phase": ("coherent cross-repository write phase", "worker owns"),
@@ -279,6 +290,145 @@ for item in allocation_items:
             raise SystemExit(
                 f"allocation case {item['id']} lost required outcome meaning {phrase!r}"
             )
+
+def require_tokens(document, label, tokens):
+    missing = [token for token in tokens if token not in document]
+    if missing:
+        raise SystemExit(f"{label} is missing required token(s): {', '.join(missing)}")
+
+require_tokens(
+    skill,
+    "SKILL proactive-recon trigger",
+    (
+        "unknown runtime path",
+        "ownership",
+        "caller flow",
+        "evidence-only RECON",
+        "`explorer` for one bounded trace",
+        "`deep_explorer` for cross-package/cross-repository",
+        "architecture-sensitive",
+        "Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known.",
+    ),
+)
+require_tokens(
+    contracts,
+    "role-contracts proactive-recon boundary",
+    (
+        "must not map the same repository space",
+        "independently reconstruct the full call graph",
+        "`explorer` owns one bounded subsystem trace",
+        "`deep_explorer` owns ambiguous ownership",
+        "cross-package or cross-repository flow",
+        "competing implementations",
+        "legacy/generated",
+        "targeted `followup_task` (or `send_message`) to the same child",
+        "contradictory evidence goes back to the same child",
+        "targeted correction",
+        "Do not add reconnaissance when the exact file/runtime path and contract are already known",
+        "status answer",
+        "strict micro-edit",
+        "decision-complete worker phase",
+    ),
+)
+require_tokens(
+    native,
+    "native RECON lifecycle",
+    (
+        "unknown runtime path",
+        "evidence-only `explorer` or `deep_explorer`",
+        "before broad primary exploration",
+        "Use `explorer` for",
+        "`deep_explorer` for ambiguous ownership, competing paths",
+        "cross-package/cross-repository flow",
+        "role-contracts.md",
+        "starts with `ANSWER` and `READ NEXT`",
+        "same child",
+        "Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known;",
+        "unresolved tests/config, generated/legacy paths, or cross-package flow still",
+        "trigger RECON when broad search is required.",
+    ),
+)
+require_tokens(
+    contracts,
+    "RECONNAISSANCE packet schema",
+    (
+        "RECONNAISSANCE (explorer/deep_explorer only)",
+        "Exact evidence questions:",
+        "Search boundary:",
+        "Primary seed evidence:",
+        "Required evidence:",
+        "Stop condition:",
+    ),
+)
+require_tokens(
+    contracts,
+    "RECONNAISSANCE RETURN schema",
+    (
+        "RECONNAISSANCE RETURN",
+        "ANSWER:",
+        "RUNTIME PATH:",
+        "RELEVANT REGIONS:",
+        "CONTRACT / TEST EVIDENCE:",
+        "CONTRADICTIONS / UNKNOWNS:",
+        "SEARCH COVERAGE:",
+        "READ NEXT:",
+        "SOL DECISION NEEDED:",
+        "observed|inferred",
+        "labels observation versus inference",
+    ),
+)
+require_tokens(
+    skill_manifest.get("input_contract", ""),
+    "skill manifest input_contract",
+    (
+        "proactive reconnaissance",
+        "evidence-only explorer",
+        "deep_explorer",
+        "cross-package or cross-repository",
+        "before broad primary search",
+        "Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known",
+    ),
+)
+require_tokens(
+    skill_manifest.get("output_contract", ""),
+    "skill manifest output_contract",
+    (
+        "cited RECONNAISSANCE RETURN",
+        "ANSWER",
+        "RUNTIME PATH",
+        "RELEVANT REGIONS",
+        "CONTRACT / TEST EVIDENCE",
+        "CONTRADICTIONS / UNKNOWNS",
+        "SEARCH COVERAGE",
+        "READ NEXT",
+        "SOL DECISION NEEDED",
+        "observed/inferred",
+    ),
+)
+if readme:
+    require_tokens(
+        readme,
+        "README explorer-first summary",
+        (
+            "evidence-only reconnaissance",
+            "`explorer` for a",
+            "bounded trace",
+            "`deep_explorer` for cross-package/cross-repository",
+            "architecture-sensitive",
+            "without exhausting the same search",
+            "Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known",
+        ),
+    )
+require_tokens(
+    native,
+    "native no-exhaustive-primary-search boundary",
+    ("does not map a repository-wide call graph", "broad primary exploration", "rather than replaying the broad"),
+)
+require_tokens(
+    contracts,
+    "canonical no-exhaustive-primary-search boundary",
+    ("must not map the same repository space", "independently reconstruct the full call graph"),
+)
 for bucket, expected in (("should_trigger", True), ("should_not_trigger", False)):
     for item in robustness_cases[bucket]:
         actual = not has_exclusive_opt_out(item["text"])
@@ -303,7 +453,7 @@ if "openai:" not in interface_text or "Native V2" not in interface_text:
 for key, expected in (
     ("version", "0.6.8"),
     ("owner", "wwwk893"),
-    ("updated_at", "2026-08-27"),
+    ("updated_at", "2026-08-28"),
     ("lifecycle_stage", "production"),
     ("context_budget_tier", "production"),
     ("review_cadence", "runtime/routing changes"),

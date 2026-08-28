@@ -33,6 +33,32 @@ evidence under an exact Sol-owned question or execute a decision-complete packet
 silently widen those decisions. Explorers return evidence and options, reviewers return
 findings and a recommendation, and Sol makes the final choice.
 
+## Proactive reconnaissance boundary
+
+For a non-trivial repository task, Sol first classifies which facts are already known and which
+require repository evidence. If the runtime path, implementation location, ownership,
+callers/callees, relevant tests, configuration, generated or legacy path, or cross-package data
+flow is unknown and resolving it requires broad search, the default is an evidence-only
+`explorer` or `deep_explorer` packet before Sol performs that search itself.
+
+Sol may inspect only enough seed material to state the user goal, known constraints, search roots,
+and exact evidence questions. It must not map the same repository space, read a long chain of
+candidate files, or independently reconstruct the full call graph before or during the child run.
+`explorer` owns one bounded subsystem trace; `deep_explorer` owns ambiguous ownership,
+cross-package or cross-repository flow, competing implementations, or legacy/generated
+reconciliation. Orthogonal read-only questions may run concurrently within the ordinary child
+ceiling.
+
+The child is an evidence-compression layer, not a decision owner. Every material claim returns
+inspectable `path:line-line` or primary-source evidence, labels observation versus inference,
+names contradictions and unknowns, and identifies the smallest decisive regions Sol should read
+next. Sol spot-checks those regions rather than repeating the broad search. Missing, stale, or
+contradictory evidence goes back to the same child as a targeted correction.
+
+Do not add reconnaissance when the exact file/runtime path and contract are already known and the
+task is a status answer, strict micro-edit, or decision-complete worker phase. The purpose is to
+save primary context without adding ceremony.
+
 Judge delegation at a coherent write phase: the related repository mutations needed to reach the
 next independently acceptable candidate state. Do not judge the whole user task, and do not
 atomize a multi-file or cross-repository write phase into per-line or per-command `tiny` work.
@@ -58,13 +84,15 @@ space while the explorer is active.
 Use for ambiguous ownership, cross-package data flow, architecture-sensitive questions,
 or legacy/generated-path reconciliation. It is read-only by default and returns the
 smallest evidence-backed option set and tradeoffs for Sol to decide; it does not edit
-product files or choose the final architecture.
+product files or choose the final architecture. Use the reconnaissance packet and return
+schema below so competing paths, observations, inferences, and unknowns remain inspectable.
 
 ### `explorer`
 
 Use for bounded code tracing, configuration inspection, dependency lookup, and other
 read-only evidence collection. It should answer the stated question without broad
-cleanup or speculative changes.
+cleanup or speculative changes. It returns cited decisive regions and search coverage,
+not a narrative dump or an implementation decision.
 
 ### `worker`
 
@@ -196,6 +224,14 @@ For evidence-only work, identify each unresolved choice as an exact Sol-owned qu
 For execution work, if a prerequisite is unresolved or contradictory, do not invent it;
 return `blocked` with the evidence and options Sol needs to decide.
 
+RECONNAISSANCE (explorer/deep_explorer only)
+- Exact evidence questions: <bounded questions whose answers change Sol's decision>
+- Search boundary: <repository roots, packages, generated/legacy areas, and explicit exclusions>
+- Primary seed evidence: <what Sol already inspected; do not repeat it without cause>
+- Required evidence: <path:line-line, symbols, callers, tests/config, or primary-source facts>
+- Stop condition: <questions answered with cited evidence, or a precise blocker/unknown>
+For other roles, mark this section `not applicable`.
+
 TEST AUTHORIZATION (tester/browser tasks only)
 - Target/environment class: <non-production | production | unknown | not applicable>
 - Credential source: <repository-declared test credential source | not applicable>
@@ -252,6 +288,29 @@ RECOMMENDATIONS: <required fixes or recommendations, or none>
 RESIDUAL RISK: <most important remaining risk, or none>
 ```
 
+For `explorer` and `deep_explorer`, replace the generic `RETURN` block with this evidence-oriented
+contract:
+
+```text
+RECONNAISSANCE RETURN
+STATUS: complete | partial | blocked
+ANSWER: <direct answer in at most six lines; distinguish observed facts from inference>
+RUNTIME PATH: <ordered path:line-line -> path:line-line chain, or not established>
+RELEVANT REGIONS:
+- <path:line-line> | <symbol> | observed|inferred | <why it matters> | confidence=<high|medium|low>
+CONTRACT / TEST EVIDENCE:
+- <path:line-line or primary source> | <what it proves>
+CONTRADICTIONS / UNKNOWNS:
+- <conflict, missing evidence, or none>
+SEARCH COVERAGE:
+- checked: <roots, queries, callers, tests/config, generated/legacy paths>
+- excluded: <out-of-scope areas>
+READ NEXT:
+- <smallest decisive path:line-line regions Sol should inspect>
+SOL DECISION NEEDED:
+- <exact choice that remains Sol-owned, or none>
+```
+
 The primary invokes the native tool explicitly:
 
 ```text
@@ -281,7 +340,9 @@ role, not only reviewers.
 
 The primary uses `list_agents`/`wait_agent`, spot-checks the actual worktree and complete
 diff, confirms ownership, and reruns the narrowest decisive acceptance subset with local, non-browser checks.
-Browser/runtime QA stays with the same tester end to end; the primary
+For explorer handoffs, it starts with `ANSWER` and `READ NEXT`, inspects the cited decisive regions,
+and checks material observations without recreating the repository-wide search. Missing or conflicting
+evidence is corrected with the same explorer. Browser/runtime QA stays with the same tester end to end; the primary
 inspects its evidence and follows up on gaps instead of repeating the browser session unless
 the user explicitly asks the primary to perform it. Expand validation only when risk or impact warrants
 it; a report without inspectable evidence is not acceptance evidence.

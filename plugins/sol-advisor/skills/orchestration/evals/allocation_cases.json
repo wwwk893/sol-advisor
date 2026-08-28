@@ -3,27 +3,27 @@
   "cases": [
     {
       "id": "ambiguous_api_ui_contract",
-      "text": "The API and UI acceptance documents disagree; decide which contract to implement.",
+      "text": "The API and UI acceptance documents disagree, and the active runtime path, owners, callers, and relevant tests are not yet known. Gather the repository evidence needed to decide which contract to implement.",
       "decision_owner": "sol",
       "execution_route": "deep_explorer",
-      "luna_scope": "Collect the conflicting contracts, callers, and tradeoffs only; Sol chooses the contract.",
-      "expected_outcome": "No implementation packet is issued until Sol resolves the contract."
+      "luna_scope": "Map the competing contracts, actual callers and runtime paths, ownership, tests, and tradeoffs with cited evidence; label observations, inferences, contradictions, and unknowns. Sol chooses the contract.",
+      "expected_outcome": "No implementation packet is issued until Sol resolves the contract after reading the cited competing paths; the primary does not exhaust the same repository search first."
     },
     {
       "id": "exact_bounded_refactor",
-      "text": "Rename this settled label in the two named files and run the named focused test.",
+      "text": "The exact two files, settled label change, interfaces, and focused test are already known. Apply the refactor and run the named check.",
       "decision_owner": "sol",
       "execution_route": "worker",
-      "luna_scope": "Apply the exact owned-file change and focused check within the settled contract.",
-      "expected_outcome": "The worker returns the diff and evidence; Sol inspects and accepts."
+      "luna_scope": "Apply the exact owned-file change and focused check within the settled contract; do not add a reconnaissance hop when the location and contract are already known.",
+      "expected_outcome": "The worker returns the diff and evidence; Sol inspects and accepts without first spawning an explorer for already-settled facts."
     },
     {
       "id": "caller_trace",
-      "text": "Trace every caller of this duplicate-validation helper and report the real runtime path.",
+      "text": "A user asks to fix behavior in an unfamiliar repository, but the implementation location, real runtime path, callers, relevant tests, and configuration are unknown. Trace the active path and report the smallest decisive regions before any implementation choice.",
       "decision_owner": "sol",
       "execution_route": "explorer",
-      "luna_scope": "Return paths, callers, and evidence without choosing or implementing a fix.",
-      "expected_outcome": "Sol uses the evidence to decide the change location."
+      "luna_scope": "Search the bounded subsystem, trace callers and configuration to the active implementation, and return path:line evidence, runtime path, tests, coverage, contradictions, and read-next regions without choosing or implementing a fix.",
+      "expected_outcome": "Sol uses the evidence to decide the change location; primary seed inspection frames the question but does not perform the repository-wide trace itself."
     },
     {
       "id": "known_staging_timeout",
@@ -139,11 +139,11 @@
     },
     {
       "id": "tiny_tightly_coupled_edit",
-      "text": "Change one settled word in the file already open and run the one-line check.",
+      "text": "The exact file is already open, the runtime path and contract are known, and the user asks to change one settled word and run the one-line check.",
       "decision_owner": "sol",
       "execution_route": "primary",
       "luna_scope": "none",
-      "expected_outcome": "Keep the tightly coupled edit primary-only when a packet would cost more than the work."
+      "expected_outcome": "Keep the tightly coupled edit primary-only; proactive reconnaissance is skipped because no repository evidence question remains."
     },
     {
       "id": "unknown_secret_rotation",
