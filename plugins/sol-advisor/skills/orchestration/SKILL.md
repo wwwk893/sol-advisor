@@ -13,6 +13,13 @@ Primary-only `micro-edit`: one repository/file, one settled change, no active wr
 one narrow local non-browser check when packet and review overhead exceeds saved context.
 Commit/push use independent authorization flags.
 
+For non-trivial repository work, use Luna as a proactive reconnaissance layer when the real runtime path,
+implementation location, ownership, callers, or relevant tests/config are unknown. Sol may perform only bounded
+seed inspection to frame exact evidence questions; it must not exhaust the repository before delegating. Use
+`explorer` for one bounded trace and `deep_explorer` for cross-package, competing-path, legacy/generated, or
+architecture-sensitive reconciliation. Sol reads the returned cited regions, spot-checks decisive evidence, and
+owns every product or architecture choice.
+
 ### Native V2
 
 Choose the smallest role: `deep_explorer`, `explorer`, `worker`, `tester`, or `reviewer`. Native tools are
