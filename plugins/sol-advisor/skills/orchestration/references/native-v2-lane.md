@@ -33,6 +33,15 @@ active worker writer; then the tester is the sole writer for that owned set. Rea
 be run concurrently when their ownership does not overlap. In a shared worktree, never run two
 writers at once. Three concurrent children is a suggested default ceiling, not a hard limit.
 
+For non-trivial repository work, use `explorer` or `deep_explorer` proactively when runtime path,
+implementation location, ownership, callers, tests/config, generated or legacy behavior, or
+cross-package flow is not yet known. The primary may inspect only enough seed material to frame
+exact evidence questions and boundaries; it must not complete the broad search before dispatch.
+The explorer returns cited decisive regions and compressed evidence. Sol then reads and spot-checks
+those regions, chooses the architecture or product contract, and avoids repeating the same search.
+Known-path status answers, strict micro-edits, and decision-complete worker phases do not gain an
+extra reconnaissance hop.
+
 Tracked product tests, proxy/config changes, and dependency or lockfile changes stay in the
 worker's coherent write phase. When an explorer has one exact evidence question, primary works on
 a different decision dimension or performs only a bounded purposeful spot-check; it does not
@@ -56,11 +65,35 @@ the result.
 
 ## Lifecycle
 
+### TRIAGE
+
+The primary interprets the user goal, authorization and safety boundary, explicit constraints,
+and acceptance intent. It records what is already known and which repository facts remain unknown.
+Triage may use bounded seed inspection, but it does not map a repository-wide call graph or read a
+long chain of candidate implementations merely to make the evidence question look complete.
+
+### RECON
+
+When a non-trivial repository task still has an unknown runtime path, implementation owner,
+caller/callee chain, relevant tests/config, generated or legacy path, or cross-package flow, dispatch
+an evidence-only `explorer` or `deep_explorer` before broad primary exploration. Use `explorer` for
+one bounded subsystem trace and `deep_explorer` for ambiguous ownership, competing paths,
+cross-package/repository flow, or architecture-sensitive reconciliation. Orthogonal read-only
+questions may run concurrently within the ordinary child ceiling.
+
+The packet names exact questions, search roots and exclusions, primary seed evidence, required
+`path:line-line` or primary-source proof, and a stop condition. The child returns `ANSWER`,
+`RUNTIME PATH`, cited `RELEVANT REGIONS`, contract/test evidence, contradictions/unknowns, search
+coverage, and `READ NEXT`. Sol reads the smallest decisive regions and spot-checks material claims;
+it does not replay the broad search. Incomplete or contradictory handoffs go back to the same child.
+Skip RECON when the exact location and contract are already known and the additional hop would cost
+more context than it saves.
+
 ### PREPARE
 
-The primary resolves intent, architecture/contracts, authorization, risk/rollback,
-irreversible scope, ownership, option selection, and acceptance evidence.
-Choose the smallest role: explorers for questions, worker for settled implementation,
+After any required reconnaissance, the primary resolves intent, architecture/contracts,
+authorization, risk/rollback, irreversible scope, ownership, option selection, and acceptance evidence.
+Choose the smallest role: explorers for unresolved evidence questions, worker for settled implementation,
 tester for focused runtime evidence, and reviewer only for a high-risk boundary or an
 explicit user request. A tester does not change product code by default; its only bounded repair/test-only
 exception requires explicit repair authorization, exact file ownership, a failed relevant check, and no active
@@ -139,19 +172,21 @@ waiting may be longer when the child is making progress.
 
 Read the handoff, then inspect the actual worktree, complete diff, changed-file scope,
 and relevant generated/runtime artifacts in the primary session. Treat child claims as
-untrusted until the primary verifies the actual artifacts. For tester-owned browser/runtime
-QA, inspect the evidence and send gaps back to the same tester instead of reproducing the
-browser session.
+untrusted until the primary verifies the actual artifacts. For explorer handoffs, begin with
+`ANSWER` and `READ NEXT`, inspect the cited decisive regions, and check material observations
+without recreating the repository-wide search. For tester-owned browser/runtime QA, inspect the
+evidence and send gaps back to the same tester instead of reproducing the browser session.
 
 ### CORRECT
 
 If the result is partial or a check fails, issue a precise `followup_task` (or
 `send_message`) to the same child with the failing evidence and required correction.
-Record machine-readable `correction_round: 0` for the initial packet and `1` or `2` for
-corrections. Beyond two requires a recorded `continuation_reason`; record `user_direction` as the
-quoted direction when present, otherwise `none`. Continue beyond two only for clear progress or
-explicit user direction. Never create a replacement child merely to reset the counter or dodge an
-unresolved correction.
+For an explorer handoff, name the missing path, unsupported claim, unresolved contradiction, or
+coverage gap rather than starting a replacement search. Record machine-readable
+`correction_round: 0` for the initial packet and `1` or `2` for corrections. Beyond two requires a
+recorded `continuation_reason`; record `user_direction` as the quoted direction when present,
+otherwise `none`. Continue beyond two only for clear progress or explicit user direction. Never
+create a replacement child merely to reset the counter or dodge an unresolved correction.
 
 ### VALIDATE
 
