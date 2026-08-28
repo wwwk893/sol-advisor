@@ -33,14 +33,8 @@ active worker writer; then the tester is the sole writer for that owned set. Rea
 be run concurrently when their ownership does not overlap. In a shared worktree, never run two
 writers at once. Three concurrent children is a suggested default ceiling, not a hard limit.
 
-For non-trivial repository work, use `explorer` or `deep_explorer` proactively when runtime path,
-implementation location, ownership, callers, tests/config, generated or legacy behavior, or
-cross-package flow is not yet known. The primary may inspect only enough seed material to frame
-exact evidence questions and boundaries; it must not complete the broad search before dispatch.
-The explorer returns cited decisive regions and compressed evidence. Sol then reads and spot-checks
-those regions, chooses the architecture or product contract, and avoids repeating the same search.
-Known-path status answers, strict micro-edits, and decision-complete worker phases do not gain an
-extra reconnaissance hop.
+Detailed role, reconnaissance, packet, and return contracts live in
+[role-contracts.md](role-contracts.md).
 
 Tracked product tests, proxy/config changes, and dependency or lockfile changes stay in the
 worker's coherent write phase. When an explorer has one exact evidence question, primary works on
@@ -78,16 +72,13 @@ When a non-trivial repository task still has an unknown runtime path, implementa
 caller/callee chain, relevant tests/config, generated or legacy path, or cross-package flow, dispatch
 an evidence-only `explorer` or `deep_explorer` before broad primary exploration. Use `explorer` for
 one bounded subsystem trace and `deep_explorer` for ambiguous ownership, competing paths,
-cross-package/repository flow, or architecture-sensitive reconciliation. Orthogonal read-only
+cross-package/cross-repository flow, or architecture-sensitive reconciliation. Orthogonal read-only
 questions may run concurrently within the ordinary child ceiling.
 
-The packet names exact questions, search roots and exclusions, primary seed evidence, required
-`path:line-line` or primary-source proof, and a stop condition. The child returns `ANSWER`,
-`RUNTIME PATH`, cited `RELEVANT REGIONS`, contract/test evidence, contradictions/unknowns, search
-coverage, and `READ NEXT`. Sol reads the smallest decisive regions and spot-checks material claims;
-it does not replay the broad search. Incomplete or contradictory handoffs go back to the same child.
-Skip RECON when the exact location and contract are already known and the additional hop would cost
-more context than it saves.
+Use the packet and return schema in [role-contracts.md](role-contracts.md). After it returns, Sol
+starts with `ANSWER` and `READ NEXT`, then spot-checks cited regions rather than replaying the broad
+search. Incomplete or contradictory handoffs go back to the same child. Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known; unresolved tests/config, generated/legacy paths, or cross-package flow still
+trigger RECON when broad search is required.
 
 ### PREPARE
 
