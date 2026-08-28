@@ -10,7 +10,7 @@
   "review_cadence": "runtime/routing changes",
   "target_platforms": ["openai-codex"],
   "factory_components": ["references", "evals"],
-  "input_contract": "Any new user request unless it explicitly opts out; Sol keeps high-value judgment, delegates proactive cited reconnaissance when runtime path or ownership is unknown, and sends each decision-complete coherent repository write phase in a native V2 packet.",
-  "output_contract": "A Sol-owned decision and acceptance response, optionally backed by a bounded Luna reconnaissance handoff with answer, runtime path, cited decisive regions, search coverage, contradictions/unknowns, and read-next evidence, or by an execution handoff with status, changed files, checks, gaps, and risk; browser/runtime QA records the selected route, capability availability, and fallback reason, using exact user selection first, desktop Chrome extension, registered headless chrome-devtools-mcp, already-installed Playwright CLI, or an exact-capability blocker.",
+  "input_contract": "Any new user request unless it explicitly opts out; Sol keeps high-value judgment, delegates exact evidence questions, and sends each decision-complete coherent repository write phase in a native V2 packet.",
+  "output_contract": "A Sol-owned decision and acceptance response, optionally backed by a bounded Luna handoff with status, changed files, decisive evidence, gaps, and risk; browser/runtime QA records the selected route, capability availability, and fallback reason, using exact user selection first, desktop Chrome extension, registered headless chrome-devtools-mcp, already-installed Playwright CLI, or an exact-capability blocker.",
   "rollback_boundary": "Revert only this skill package's files; do not mutate child worktrees, external services, or user roles."
 }
