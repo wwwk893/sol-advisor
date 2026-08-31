@@ -36,7 +36,7 @@ Role availability and spawn acceptance of the exact selected route are hard prer
 
 Compatibility sentinel for the existing 0.6.8 core verifier: the previous uniform native route was `model=gpt-5.6-luna`, `reasoning_effort=max`, `fork_turns=none`. That uniform Luna/max route is forbidden for new native V2 spawns; the tokens remain here only so the older verifier can coexist with the new dedicated model-routing verifier.
 
-Native tools are `spawn_agent`, `list_agents`, `wait_agent`, `followup_task`, `send_message`, and `interrupt_agent`. A failed or incomplete result goes back to the same child with a targeted correction; unresolved execution judgment returns `blocked` to Sol. External specialists remain opt-in, are not a sixth native role, have no production source ownership, and Sol must inspect and accept the artifact/evidence before issuing a native `worker` packet.
+Native tools are `spawn_agent`, `list_agents`, `wait_agent`, `followup_task`, `send_message`, and `interrupt_agent`. A failed or incomplete result goes back to the same child with a targeted correction; unresolved execution judgment returns `blocked` to Sol. Native V2 does not require app-task tools or the legacy Terra/Sol companion roles; those remain explicit compatibility lanes and are not the default. External specialists remain opt-in, are not a sixth native role, have no production source ownership, and Sol must inspect and accept the artifact/evidence before issuing a native `worker` packet.
 
 ### Browser/runtime QA
 
