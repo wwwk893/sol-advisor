@@ -17,9 +17,8 @@ skill=$plugin_dir/skills/orchestration/SKILL.md
 lane=$plugin_dir/skills/orchestration/references/external-specialist-lane.md
 cases=$plugin_dir/skills/orchestration/evals/external_specialist_cases.json
 allocation=$plugin_dir/skills/orchestration/evals/allocation_cases.json
-model_verifier=$script_dir/verify-model-routing.sh
 
-for required in "$skill" "$lane" "$cases" "$allocation" "$model_verifier"; do
+for required in "$skill" "$lane" "$cases" "$allocation"; do
   test -f "$required" || fail "required file missing: $required"
 done
 
@@ -146,7 +145,7 @@ if allocation.get("suite") != "Sol-primary cognitive allocation holdout":
 if not isinstance(allocation_items, list) or not allocation_items:
     raise SystemExit("native allocation fixture must contain a non-empty cases list")
 allocation_fields = (
-    "id", "text", "decision_owner", "execution_route", "luna_scope", "expected_outcome"
+    "id", "text", "decision_owner", "execution_route", "delegated_scope", "expected_outcome"
 )
 allocation_ids = set()
 allocation_texts = set()
@@ -182,6 +181,5 @@ for forbidden in ("agent_type=external", "agent_type=designer", "agent_type=clau
 print("external specialist lane preserves Sol ownership and the five-role native inventory")
 PY
 
-sh "$model_verifier"
 sh -n "$script_dir/verify-external-specialist.sh"
-pass "external specialist and balanced model-routing contracts, holdout cases, and shell syntax"
+pass "external specialist contract, holdout cases, and shell syntax"

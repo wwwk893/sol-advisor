@@ -76,10 +76,21 @@ metadata omits model or effort, record an `unobservable` warning and continue an
 is no conflict evidence. `priority` is requested/capability evidence with the same warning semantics.
 There is no silent fallback to another model, effort, role, or provider.
 
-The native call pins a resolved route explicitly:
+The native spawn API contains only actual `spawn_agent` arguments:
 
 ```text
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
+agent_type=default
+model=<resolved gpt-5.6-luna|gpt-5.6-terra|gpt-5.6-sol>
+reasoning_effort=<resolved medium|high>
+fork_turns=none
+```
+
+Put routing intent in the task packet, not the spawn API:
+
+```text
+ROUTE
+carrier_agent_type=default
+logical_role=<deep_explorer|explorer|worker|tester|reviewer>
 route_class=<default|mechanical-fast-path|normal|critical-risk>
 model=<resolved gpt-5.6-luna|gpt-5.6-terra|gpt-5.6-sol>
 reasoning_effort=<resolved medium|high>
@@ -94,6 +105,9 @@ push, deploy, delete, upload, or handle secrets unless the user explicitly autho
 the primary keeps it in scope. When a child fails, correct the specification and follow up with that
 same child. The primary spot-checks the actual diff and reruns the narrowest decisive acceptance subset
 with local, non-browser checks. Browser/runtime QA stays with the same tester.
+
+A primary-only micro-edit remains exceptional: it needs one already-inspected owned file, a settled
+atomic change, no writer/dirty ownership ambiguity, at most one local non-browser check; packet and review overhead must exceed the saved context.
 
 The native lane does not require app-task tools, a nested Codex CLI, or an installed companion role.
 Do not install or remove roles automatically.

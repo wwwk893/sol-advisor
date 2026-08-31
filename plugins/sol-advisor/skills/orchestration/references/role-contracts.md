@@ -1,7 +1,7 @@
 # Native mixed-model V2 role contracts
 
 This document is the contract for the default native subagent V2 lane. The primary
-selects one of five native roles and pins the model and reasoning effort from the balanced
+selects one of five logical roles and pins the model and reasoning effort from the balanced
 routing matrix below. The user-visible app-task Luna lane and the legacy Terra/Sol TOMLs
 remain explicit compatibility paths; they are not represented by these contracts.
 
@@ -19,9 +19,11 @@ Resolve the role first, then resolve exactly one model route:
 | `reviewer` normal | `gpt-5.6-sol` | `medium` |
 | `reviewer` critical-risk | `gpt-5.6-sol` | `high` |
 
+The specialized role presets are immutable Luna/Max carriers and cannot carry this matrix. Every
+mixed-lane spawn uses `agent_type=default`; `logical_role` and `route_class` remain packet fields.
 Before a spawn, the primary must establish:
 
-1. the requested role is available in the native `spawn_agent` surface;
+1. the default carrier is available in the native `spawn_agent` surface;
 2. the task satisfies the selected route class and the request includes the exact resolved
    `model`, `reasoning_effort`, and `fork_turns=none`; and
 3. the spawn accepts that explicit route.
@@ -32,11 +34,6 @@ delegation. If accepted metadata omits model or effort, record an `unobservable`
 continue an ordinary task when there is no conflict evidence. There is no silent fallback to
 another role, model, effort, or provider. `priority` has the same warning semantics when it is
 omitted. The primary model and effort are not hard gates for using this skill.
-
-Compatibility sentinel for the existing 0.6.8 core verifier: the old uniform native request was
-`model=gpt-5.6-luna`, `reasoning_effort=max`, `fork_turns=none`. That uniform Luna/max route is
-forbidden for new native V2 spawns; these literal fields remain only so the older verifier can
-coexist with `verify-model-routing.sh` during this release.
 
 ### Worker route selection
 
@@ -232,11 +229,12 @@ copy. Replace every placeholder before spawning:
 
 ```text
 ROLE
-Act as the <deep_explorer|explorer|worker|tester|reviewer> in Sol Advisor's native
+Act as the logical <deep_explorer|explorer|worker|tester|reviewer> in Sol Advisor's native
 mixed-model V2 lane.
 
 ROUTE
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
+carrier_agent_type=default
+logical_role=<deep_explorer|explorer|worker|tester|reviewer>
 route_class=<default|mechanical-fast-path|normal|critical-risk>
 model=<resolved gpt-5.6-luna|gpt-5.6-terra|gpt-5.6-sol>
 reasoning_effort=<resolved medium|high>
@@ -352,17 +350,16 @@ SOL DECISION NEEDED:
 - <exact choice that remains Sol-owned, or none>
 ```
 
-The primary invokes the native tool explicitly with the route resolved before spawn:
+The native spawn API contains only these `spawn_agent` arguments:
 
 ```text
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
-route_class=<default|mechanical-fast-path|normal|critical-risk>
+agent_type=default
 model=<resolved gpt-5.6-luna|gpt-5.6-terra|gpt-5.6-sol>
 reasoning_effort=<resolved medium|high>
 fork_turns=none
 ```
 
-These fields are intentional routing, not a silent fallback.
+The ROUTE packet metadata above is intentional routing, not a silent fallback.
 
 ## Same-agent correction
 

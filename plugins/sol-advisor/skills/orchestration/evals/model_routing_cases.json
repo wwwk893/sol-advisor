@@ -1,95 +1,34 @@
 {
   "suite": "Balanced native model routing holdout",
+  "metadata": "text is unique reviewer context only; structured facts and asserted route fields drive routing, not prompt or model execution.",
   "cases": [
-    {
-      "id": "bounded_subsystem_trace",
-      "text": "Trace one bounded subsystem and return cited callers, config, and tests.",
-      "agent_type": "explorer",
-      "route_class": "default",
-      "model": "gpt-5.6-luna",
-      "reasoning_effort": "high",
-      "expected_outcome": "Use the fastest low-cost evidence route for a bounded trace while Sol keeps the decision."
-    },
-    {
-      "id": "cross_repo_architecture_trace",
-      "text": "Reconcile competing implementations across packages and repositories before Sol chooses the active contract.",
-      "agent_type": "deep_explorer",
-      "route_class": "default",
-      "model": "gpt-5.6-terra",
-      "reasoning_effort": "high",
-      "expected_outcome": "Use Terra High for long-context architecture-sensitive reconnaissance."
-    },
-    {
-      "id": "mechanical_two_file_worker",
-      "text": "Apply a fully settled two-file refactor with no cross-package flow, generated paths, config migration, dependency change, or lockfile change, then run one focused check.",
-      "agent_type": "worker",
-      "route_class": "mechanical-fast-path",
-      "model": "gpt-5.6-luna",
-      "reasoning_effort": "high",
-      "expected_outcome": "Use Luna High only because every mechanical fast-path predicate is satisfied."
-    },
-    {
-      "id": "normal_multifile_worker",
-      "text": "Implement a settled coherent feature across several related product and test files.",
-      "agent_type": "worker",
-      "route_class": "normal",
-      "model": "gpt-5.6-terra",
-      "reasoning_effort": "high",
-      "expected_outcome": "Use Terra High for normal implementation reliability without Max latency."
-    },
-    {
-      "id": "cross_repo_worker",
-      "text": "Implement a settled cross-repository write phase and focused regression checks.",
-      "agent_type": "worker",
-      "route_class": "normal",
-      "model": "gpt-5.6-terra",
-      "reasoning_effort": "high",
-      "expected_outcome": "Cross-repository ownership disqualifies the Luna mechanical fast-path."
-    },
-    {
-      "id": "lockfile_disqualifies_fast_path",
-      "text": "Apply a small settled change that also updates a dependency lockfile.",
-      "agent_type": "worker",
-      "route_class": "normal",
-      "model": "gpt-5.6-terra",
-      "reasoning_effort": "high",
-      "expected_outcome": "A dependency or lockfile change disqualifies the Luna mechanical fast-path."
-    },
-    {
-      "id": "browser_runtime_tester",
-      "text": "Run the settled browser reproduction and capture network, log, and UI evidence.",
-      "agent_type": "tester",
-      "route_class": "default",
-      "model": "gpt-5.6-luna",
-      "reasoning_effort": "high",
-      "expected_outcome": "Use Luna High for tool-heavy deterministic QA and evidence capture."
-    },
-    {
-      "id": "ordinary_independent_review",
-      "text": "Perform an independent review of a non-critical but high-risk code boundary and recommend ship, fix-first, or rethink.",
-      "agent_type": "reviewer",
-      "route_class": "normal",
-      "model": "gpt-5.6-sol",
-      "reasoning_effort": "medium",
-      "expected_outcome": "Use Sol Medium for strong independent judgment with lower latency and cost."
-    },
-    {
-      "id": "production_auth_review",
-      "text": "Review a production authentication and access-control rollout with residual security risk.",
-      "agent_type": "reviewer",
-      "route_class": "critical-risk",
-      "model": "gpt-5.6-sol",
-      "reasoning_effort": "high",
-      "expected_outcome": "Escalate the reviewer to Sol High for a production auth or privilege boundary."
-    },
-    {
-      "id": "irreversible_migration_review",
-      "text": "Review an irreversible data migration with credible data-loss risk before Sol decides acceptance.",
-      "agent_type": "reviewer",
-      "route_class": "critical-risk",
-      "model": "gpt-5.6-sol",
-      "reasoning_effort": "high",
-      "expected_outcome": "Escalate the reviewer to Sol High for destructive or irreversible data risk."
-    }
+    {"id":"bounded_subsystem_trace","text":"Trace one bounded subsystem.","logical_role":"explorer","carrier_agent_type":"default","route_class":"default","model":"gpt-5.6-luna","reasoning_effort":"high","facts":{"recon_scope":"bounded"}},
+    {"id":"cross_repo_architecture_trace","text":"Reconcile cross-repository contracts.","logical_role":"deep_explorer","carrier_agent_type":"default","route_class":"default","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"recon_scope":"cross-package/cross-repository"}},
+    {"id":"browser_runtime_tester","text":"Capture browser runtime evidence.","logical_role":"tester","carrier_agent_type":"default","route_class":"default","model":"gpt-5.6-luna","reasoning_effort":"high","facts":{"qa_scope":"browser/runtime"}},
+    {"id":"mechanical_two_file_worker","text":"Apply a fully settled two-file refactor.","logical_role":"worker","carrier_agent_type":"default","route_class":"mechanical-fast-path","model":"gpt-5.6-luna","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"unknown_file_set","text":"Exact owned files are unknown.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":null,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"nonpositive_file_count","text":"A settled phase reports zero owned files.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":0,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"too_many_files","text":"A settled phase owns three files.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":3,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"unsettled_intent","text":"Intent is not settled.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":false,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"unsettled_interfaces","text":"Interfaces are not settled.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":false,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"unsettled_architecture","text":"Architecture is not settled.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":false,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"unsettled_authorization","text":"Authorization is not settled.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":false,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"unsettled_risk","text":"Risk is not settled.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":false,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"unsettled_acceptance","text":"Acceptance is not settled.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":false,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"cross_repository","text":"The phase crosses repositories.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":true,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"dependency_change","text":"The phase changes a dependency lockfile.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":true,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"config_migration","text":"The phase migrates tracked configuration.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":true,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"generated_legacy","text":"The phase reconciles generated and legacy paths.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":true,"writer_ownership_unambiguous":true,"focused_check_count":1}},
+    {"id":"ambiguous_writer","text":"Writer ownership overlaps.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":false,"focused_check_count":1}},
+    {"id":"multiple_checks","text":"The phase needs two focused checks.","logical_role":"worker","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-terra","reasoning_effort":"high","facts":{"owned_files_known":true,"owned_file_count":2,"intent_settled":true,"interfaces_settled":true,"architecture_settled":true,"authorization_settled":true,"risk_settled":true,"acceptance_settled":true,"cross_package_or_repository":false,"dependency_or_lockfile_change":false,"tracked_config_migration":false,"generated_or_legacy_reconciliation":false,"writer_ownership_unambiguous":true,"focused_check_count":2}},
+    {"id":"ordinary_review","text":"Review an ordinary bounded change.","logical_role":"reviewer","carrier_agent_type":"default","route_class":"normal","model":"gpt-5.6-sol","reasoning_effort":"medium","facts":{"risk":{"production_authentication":false,"access_control":false,"secrets":false,"security_sensitive_privilege":false,"destructive_data_or_migration":false,"irreversible_data_or_migration":false,"credible_data_loss":false,"high_consequence_residual_risk":false}}},
+    {"id":"production_auth_review","text":"Review production authentication.","logical_role":"reviewer","carrier_agent_type":"default","route_class":"critical-risk","model":"gpt-5.6-sol","reasoning_effort":"high","facts":{"risk":{"production_authentication":true,"access_control":false,"secrets":false,"security_sensitive_privilege":false,"destructive_data_or_migration":false,"irreversible_data_or_migration":false,"credible_data_loss":false,"high_consequence_residual_risk":false}}},
+    {"id":"access_control_review","text":"Review access control.","logical_role":"reviewer","carrier_agent_type":"default","route_class":"critical-risk","model":"gpt-5.6-sol","reasoning_effort":"high","facts":{"risk":{"production_authentication":false,"access_control":true,"secrets":false,"security_sensitive_privilege":false,"destructive_data_or_migration":false,"irreversible_data_or_migration":false,"credible_data_loss":false,"high_consequence_residual_risk":false}}},
+    {"id":"secrets_review","text":"Review secret handling.","logical_role":"reviewer","carrier_agent_type":"default","route_class":"critical-risk","model":"gpt-5.6-sol","reasoning_effort":"high","facts":{"risk":{"production_authentication":false,"access_control":false,"secrets":true,"security_sensitive_privilege":false,"destructive_data_or_migration":false,"irreversible_data_or_migration":false,"credible_data_loss":false,"high_consequence_residual_risk":false}}},
+    {"id":"privilege_review","text":"Review security-sensitive privilege.","logical_role":"reviewer","carrier_agent_type":"default","route_class":"critical-risk","model":"gpt-5.6-sol","reasoning_effort":"high","facts":{"risk":{"production_authentication":false,"access_control":false,"secrets":false,"security_sensitive_privilege":true,"destructive_data_or_migration":false,"irreversible_data_or_migration":false,"credible_data_loss":false,"high_consequence_residual_risk":false}}},
+    {"id":"destructive_data_review","text":"Review destructive data behavior.","logical_role":"reviewer","carrier_agent_type":"default","route_class":"critical-risk","model":"gpt-5.6-sol","reasoning_effort":"high","facts":{"risk":{"production_authentication":false,"access_control":false,"secrets":false,"security_sensitive_privilege":false,"destructive_data_or_migration":true,"irreversible_data_or_migration":false,"credible_data_loss":false,"high_consequence_residual_risk":false}}},
+    {"id":"irreversible_migration_review","text":"Review irreversible migration behavior.","logical_role":"reviewer","carrier_agent_type":"default","route_class":"critical-risk","model":"gpt-5.6-sol","reasoning_effort":"high","facts":{"risk":{"production_authentication":false,"access_control":false,"secrets":false,"security_sensitive_privilege":false,"destructive_data_or_migration":false,"irreversible_data_or_migration":true,"credible_data_loss":false,"high_consequence_residual_risk":false}}},
+    {"id":"data_loss_review","text":"Review credible data loss.","logical_role":"reviewer","carrier_agent_type":"default","route_class":"critical-risk","model":"gpt-5.6-sol","reasoning_effort":"high","facts":{"risk":{"production_authentication":false,"access_control":false,"secrets":false,"security_sensitive_privilege":false,"destructive_data_or_migration":false,"irreversible_data_or_migration":false,"credible_data_loss":true,"high_consequence_residual_risk":false}}},
+    {"id":"residual_risk_review","text":"Review high-consequence residual risk.","logical_role":"reviewer","carrier_agent_type":"default","route_class":"critical-risk","model":"gpt-5.6-sol","reasoning_effort":"high","facts":{"risk":{"production_authentication":false,"access_control":false,"secrets":false,"security_sensitive_privilege":false,"destructive_data_or_migration":false,"irreversible_data_or_migration":false,"credible_data_loss":false,"high_consequence_residual_risk":true}}}
   ]
 }

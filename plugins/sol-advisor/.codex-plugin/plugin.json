@@ -1,6 +1,6 @@
 {
   "name": "sol-advisor",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "description": "Codex-native workflow that reserves high-value judgment for Sol and balances native Luna/Terra/Sol subagents by role, latency, and risk.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/wwwk893/sol-advisor#readme",

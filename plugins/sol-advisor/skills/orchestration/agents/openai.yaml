@@ -1,4 +1,4 @@
 interface:
   display_name: "Sol Advisor Orchestration"
-  short_description: "Default native Luna V2-compatible routing now balances Luna, Terra, and Sol by role"
-  default_prompt: "Route through $sol-advisor:orchestration; keep critical judgment in Sol and use the balanced native Luna/Terra/Sol route matrix."
+  short_description: "Default native V2 routing uses a default carrier with logical-role model routing"
+  default_prompt: "Route through $sol-advisor:orchestration; keep Sol judgment and use the balanced default-carrier native matrix."

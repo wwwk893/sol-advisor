@@ -8,16 +8,18 @@ other app-task tools, and it does not install or remove custom-agent TOMLs.
 
 ## Runtime contract
 
-The available role names are `deep_explorer`, `explorer`, `worker`, `tester`, and
-`reviewer`. Resolve the role before the model route, then pin the exact balanced route:
+The five logical role names are `deep_explorer`, `explorer`, `worker`, `tester`, and
+`reviewer`. Resolve the logical role before the model route, then pin the exact balanced route:
 
-- `explorer` -> `gpt-5.6-luna`, `high`
-- `deep_explorer` -> `gpt-5.6-terra`, `high`
-- `worker` mechanical fast-path -> `gpt-5.6-luna`, `high`
-- `worker` normal -> `gpt-5.6-terra`, `high`
-- `tester` -> `gpt-5.6-luna`, `high`
-- `reviewer` normal -> `gpt-5.6-sol`, `medium`
-- `reviewer` critical-risk -> `gpt-5.6-sol`, `high`
+| Role / class | Model | Effort |
+|---|---|---|
+| `explorer` | `gpt-5.6-luna` | `high` |
+| `deep_explorer` | `gpt-5.6-terra` | `high` |
+| `worker` mechanical fast-path | `gpt-5.6-luna` | `high` |
+| `worker` normal | `gpt-5.6-terra` | `high` |
+| `tester` | `gpt-5.6-luna` | `high` |
+| `reviewer` normal | `gpt-5.6-sol` | `medium` |
+| `reviewer` critical-risk | `gpt-5.6-sol` | `high` |
 
 Role availability and spawn acceptance of the exact resolved route are hard prerequisites. If
 public spawn or rollout metadata explicitly conflicts or shows a fallback, stop; if accepted
@@ -25,10 +27,11 @@ metadata omits model or effort, record an `unobservable` warning and continue or
 no conflict evidence exists. There is no silent fallback. `priority` has the same warning semantics
 when omitted. The primary model and effort are informational and are not a hard stop.
 
-Compatibility sentinel for the existing 0.6.8 core verifier: the previous uniform native route was
-`model=gpt-5.6-luna`, `reasoning_effort=max`, `fork_turns=none`. That uniform Luna/max route is
-forbidden for new native V2 spawns; the literal fields remain only for coexistence with the older
-verifier while `verify-model-routing.sh` enforces this lane's actual matrix.
+The specialized `agent_type` presets are immutable Luna/Max carriers, so they cannot honestly
+carry this matrix. Every mixed-lane spawn uses `agent_type=default`, explicit resolved model and
+effort, and `fork_turns=none`; the packet carries `logical_role` and `route_class`. Do not call a
+specialized preset and claim it was overridden. If the default carrier or exact route is unavailable,
+return `blocked` with no fallback.
 
 The worker mechanical fast-path may use Luna High only when the exact owned files are known, the
 coherent write phase contains at most two files, all decisions and interfaces are settled, no
@@ -153,10 +156,12 @@ Build a compact packet from
 resolved effort, `fork_turns: none`, exact owned files, interfaces, constraints, verification commands,
 and a structured return. Do not copy the entire conversation, prompt history, or full diff.
 
-The spawn shape is resolved before the call:
+Put these fields in the task packet's ROUTE metadata, not the spawn API:
 
 ```text
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
+ROUTE
+carrier_agent_type=default
+logical_role=<deep_explorer|explorer|worker|tester|reviewer>
 route_class=<default|mechanical-fast-path|normal|critical-risk>
 model=<resolved gpt-5.6-luna|gpt-5.6-terra|gpt-5.6-sol>
 reasoning_effort=<resolved medium|high>
@@ -167,9 +172,9 @@ The compact task packet and reviewer return schema are defined in `role-contract
 
 ### PREFLIGHT
 
-Inspect the native tool's actual role surface and prepare the explicit route fields.
-Require the exact role and an accepted spawn request with the route-class-specific model,
-reasoning effort, and `fork_turns=none`; stop if the role is unavailable or the spawn rejects the
+Inspect the native tool's actual carrier surface and prepare the explicit route fields.
+Require the default carrier and an accepted spawn request with the logical-role and route-class-specific model,
+reasoning effort, and `fork_turns=none`; stop if the carrier is unavailable or the spawn rejects the
 request. If accepted public metadata or rollout evidence conflicts or shows a fallback, stop; if
 fields are omitted, emit an `unobservable` warning rather than blocking an ordinary task. Capture
 `priority` when exposed, otherwise warn. Confirm the shared-worktree writer slot is free. Re-evaluate
@@ -178,9 +183,17 @@ choose the safer normal route rather than a cheaper or weaker one.
 
 ### SPAWN
 
-Call `spawn_agent` with the selected `agent_type`, exact resolved `model`, exact resolved
-`reasoning_effort`, and `fork_turns=none`. This explicit route is intentional, not a fallback. Do not
-use an app task, nested CLI, or legacy Terra/Sol companion role in this lane.
+The native spawn API contains only these `spawn_agent` arguments:
+
+```text
+agent_type=default
+model=<resolved gpt-5.6-luna|gpt-5.6-terra|gpt-5.6-sol>
+reasoning_effort=<resolved medium|high>
+fork_turns=none
+```
+
+This explicit route is intentional, not a fallback. Do not use a specialized preset, app task,
+nested CLI, or legacy Terra/Sol companion role in this lane.
 
 ### MONITOR
 
