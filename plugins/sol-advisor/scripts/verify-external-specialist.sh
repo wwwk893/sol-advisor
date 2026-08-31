@@ -17,8 +17,9 @@ skill=$plugin_dir/skills/orchestration/SKILL.md
 lane=$plugin_dir/skills/orchestration/references/external-specialist-lane.md
 cases=$plugin_dir/skills/orchestration/evals/external_specialist_cases.json
 allocation=$plugin_dir/skills/orchestration/evals/allocation_cases.json
+model_verifier=$script_dir/verify-model-routing.sh
 
-for required in "$skill" "$lane" "$cases" "$allocation"; do
+for required in "$skill" "$lane" "$cases" "$allocation" "$model_verifier"; do
   test -f "$required" || fail "required file missing: $required"
 done
 
@@ -46,14 +47,14 @@ required_skill_tokens = (
     "not a sixth native role",
     "no production source ownership",
     "no silent fallback",
-    "accept it before issuing a Luna `worker` packet",
+    "accept the artifact/evidence before issuing a native `worker` packet",
 )
 for token in required_skill_tokens:
     if token not in skill:
         raise SystemExit(f"SKILL is missing {token!r}")
 
 required_lane_tokens = (
-    "exact provider/runtime/model/tool",
+    "provider/runtime/model/tool selection",
     "worktree state before and after",
     "stable idempotency/request identifier",
     "succeeded-no-output",
@@ -72,8 +73,6 @@ if cases.get("suite") != "Sol-owned external specialist holdout":
 if not isinstance(items, list) or len(items) != 5:
     raise SystemExit("external specialist case suite must contain exactly five cases")
 
-# Keep the holdout descriptions and outcomes reviewable.  A route-only check would let a blank or
-# silently rewritten case continue to pass while preserving the same id-to-route mapping.
 expected = {
     "substantial_ui_artifact": {
         "text": "The interaction direction is unsettled; commission the exact configured design specialist to produce a rendered prototype before implementation.",
@@ -91,7 +90,7 @@ expected = {
         "text": "The rendered design artifact and implementation handoff are accepted; implement the named production files and focused tests.",
         "decision_owner": "sol",
         "route": "worker",
-        "expected_outcome": "A native Luna worker owns production implementation; the external specialist receives no production source ownership.",
+        "expected_outcome": "A native worker owns production implementation; the external specialist receives no production source ownership.",
     },
     "exact_external_route_unavailable": {
         "text": "The user requires one exact external runtime and model, but that route is unavailable.",
@@ -183,5 +182,6 @@ for forbidden in ("agent_type=external", "agent_type=designer", "agent_type=clau
 print("external specialist lane preserves Sol ownership and the five-role native inventory")
 PY
 
+sh "$model_verifier"
 sh -n "$script_dir/verify-external-specialist.sh"
-pass "external specialist contract, holdout cases, and shell syntax"
+pass "external specialist and balanced model-routing contracts, holdout cases, and shell syntax"
