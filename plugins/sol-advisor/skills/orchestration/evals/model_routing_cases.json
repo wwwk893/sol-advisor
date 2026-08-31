@@ -1,0 +1,95 @@
+{
+  "suite": "Balanced native model routing holdout",
+  "cases": [
+    {
+      "id": "bounded_subsystem_trace",
+      "text": "Trace one bounded subsystem and return cited callers, config, and tests.",
+      "agent_type": "explorer",
+      "route_class": "default",
+      "model": "gpt-5.6-luna",
+      "reasoning_effort": "high",
+      "expected_outcome": "Use the fastest low-cost evidence route for a bounded trace while Sol keeps the decision."
+    },
+    {
+      "id": "cross_repo_architecture_trace",
+      "text": "Reconcile competing implementations across packages and repositories before Sol chooses the active contract.",
+      "agent_type": "deep_explorer",
+      "route_class": "default",
+      "model": "gpt-5.6-terra",
+      "reasoning_effort": "high",
+      "expected_outcome": "Use Terra High for long-context architecture-sensitive reconnaissance."
+    },
+    {
+      "id": "mechanical_two_file_worker",
+      "text": "Apply a fully settled two-file refactor with no cross-package flow, generated paths, config migration, dependency change, or lockfile change, then run one focused check.",
+      "agent_type": "worker",
+      "route_class": "mechanical-fast-path",
+      "model": "gpt-5.6-luna",
+      "reasoning_effort": "high",
+      "expected_outcome": "Use Luna High only because every mechanical fast-path predicate is satisfied."
+    },
+    {
+      "id": "normal_multifile_worker",
+      "text": "Implement a settled coherent feature across several related product and test files.",
+      "agent_type": "worker",
+      "route_class": "normal",
+      "model": "gpt-5.6-terra",
+      "reasoning_effort": "high",
+      "expected_outcome": "Use Terra High for normal implementation reliability without Max latency."
+    },
+    {
+      "id": "cross_repo_worker",
+      "text": "Implement a settled cross-repository write phase and focused regression checks.",
+      "agent_type": "worker",
+      "route_class": "normal",
+      "model": "gpt-5.6-terra",
+      "reasoning_effort": "high",
+      "expected_outcome": "Cross-repository ownership disqualifies the Luna mechanical fast-path."
+    },
+    {
+      "id": "lockfile_disqualifies_fast_path",
+      "text": "Apply a small settled change that also updates a dependency lockfile.",
+      "agent_type": "worker",
+      "route_class": "normal",
+      "model": "gpt-5.6-terra",
+      "reasoning_effort": "high",
+      "expected_outcome": "A dependency or lockfile change disqualifies the Luna mechanical fast-path."
+    },
+    {
+      "id": "browser_runtime_tester",
+      "text": "Run the settled browser reproduction and capture network, log, and UI evidence.",
+      "agent_type": "tester",
+      "route_class": "default",
+      "model": "gpt-5.6-luna",
+      "reasoning_effort": "high",
+      "expected_outcome": "Use Luna High for tool-heavy deterministic QA and evidence capture."
+    },
+    {
+      "id": "ordinary_independent_review",
+      "text": "Perform an independent review of a non-critical but high-risk code boundary and recommend ship, fix-first, or rethink.",
+      "agent_type": "reviewer",
+      "route_class": "normal",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "medium",
+      "expected_outcome": "Use Sol Medium for strong independent judgment with lower latency and cost."
+    },
+    {
+      "id": "production_auth_review",
+      "text": "Review a production authentication and access-control rollout with residual security risk.",
+      "agent_type": "reviewer",
+      "route_class": "critical-risk",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "high",
+      "expected_outcome": "Escalate the reviewer to Sol High for a production auth or privilege boundary."
+    },
+    {
+      "id": "irreversible_migration_review",
+      "text": "Review an irreversible data migration with credible data-loss risk before Sol decides acceptance.",
+      "agent_type": "reviewer",
+      "route_class": "critical-risk",
+      "model": "gpt-5.6-sol",
+      "reasoning_effort": "high",
+      "expected_outcome": "Escalate the reviewer to Sol High for destructive or irreversible data risk."
+    }
+  ]
+}
