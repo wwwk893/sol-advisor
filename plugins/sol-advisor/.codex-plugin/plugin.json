@@ -1,7 +1,7 @@
 {
   "name": "sol-advisor",
-  "version": "0.6.8",
-  "description": "Codex-native workflow that reserves high-value judgment for Sol and delegates decision-complete bounded execution to Luna V2.",
+  "version": "0.6.9",
+  "description": "Codex-native workflow that reserves high-value judgment for Sol and balances native Luna/Terra/Sol subagents by role, latency, and risk.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/wwwk893/sol-advisor#readme",
   "repository": "https://github.com/wwwk893/sol-advisor",
@@ -10,12 +10,12 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sol Advisor",
-    "shortDescription": "Sol owns critical judgment; native Luna V2 executes decision-complete bounded work.",
-    "longDescription": "Sol Advisor routes every request by default. Sol primary keeps intent, architecture/contracts, authorization, risk, option selection, integration, and acceptance; native Luna V2 proactively gathers cited repository evidence when the real runtime path or implementation location is unknown, then receives exact bounded questions or a decision-complete coherent repository write phase. Atomic one-file micro-edits may stay primary only when the strict micro-edit boundary holds; multi-file and cross-repository phases go to a worker. Browser/runtime QA honors an exact user-selected tool without fallback; default or generic QA probes capabilities and uses the desktop Chrome extension, registered headless chrome-devtools-mcp, then an already-installed runnable Playwright CLI as last fallback, or blocks with exact missing capabilities. App-task Luna and legacy Terra/Sol remain explicit compatibility options.",
+    "shortDescription": "Sol owns critical judgment; native V2 balances Luna, Terra, and Sol by role.",
+    "longDescription": "Sol Advisor routes every request by default. Sol primary keeps intent, architecture/contracts, authorization, risk, option selection, integration, and acceptance; native V2 uses Luna High for bounded exploration and testing, Terra High for deep reconnaissance and normal implementation, Luna High for tightly constrained mechanical worker fast-paths, and Sol Medium/High for independent review based on critical risk. Non-trivial unknown paths still start cited repository reconnaissance before broad primary search. Browser/runtime QA honors an exact user-selected tool without fallback; default or generic QA probes capabilities and uses the desktop Chrome extension, registered headless chrome-devtools-mcp, then an already-installed runnable Playwright CLI as last fallback, or blocks with exact missing capabilities. App-task Luna and legacy Terra/Sol companion roles remain explicit compatibility options.",
     "developerName": "wwwk893 (maintainer; original author Daniel McAteer)",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "websiteURL": "https://github.com/wwwk893/sol-advisor",
-    "defaultPrompt": ["Route through Sol Advisor; keep high-value judgment in Sol and delegate decision-complete execution to Luna Max.", "Use app-task Luna or legacy Terra/Sol only when I explicitly authorize compatibility."]
+    "defaultPrompt": ["Route through Sol Advisor; keep high-value judgment in Sol and use the balanced native Luna/Terra/Sol model matrix.", "Use app-task Luna or legacy Terra/Sol companion roles only when I explicitly authorize compatibility."]
   }
 }

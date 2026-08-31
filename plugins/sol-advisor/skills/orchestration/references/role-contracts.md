@@ -1,36 +1,69 @@
-# Native Luna V2 role contracts
+# Native mixed-model V2 role contracts
 
 This document is the contract for the default native subagent V2 lane. The primary
-selects one of five native roles and explicitly requests `gpt-5.6-luna` with `max`
-effort.
-The user-visible app-task Luna lane and the legacy Terra/Sol TOMLs are explicit
-compatibility paths; they are not represented by these contracts.
+selects one of five logical roles and pins the model and reasoning effort from the balanced
+routing matrix below. The user-visible app-task Luna lane and the legacy Terra/Sol TOMLs
+remain explicit compatibility paths; they are not represented by these contracts.
 
 ## Routing gates
 
+Resolve the role first, then resolve exactly one model route:
+
+| Role / class | Model | Effort |
+|---|---|---|
+| `explorer` | `gpt-5.6-luna` | `high` |
+| `deep_explorer` | `gpt-5.6-terra` | `high` |
+| `worker` mechanical fast-path | `gpt-5.6-luna` | `high` |
+| `worker` normal | `gpt-5.6-terra` | `high` |
+| `tester` | `gpt-5.6-luna` | `high` |
+| `reviewer` normal | `gpt-5.6-sol` | `medium` |
+| `reviewer` critical-risk | `gpt-5.6-sol` | `high` |
+
+The specialized role presets are immutable Luna/Max carriers and cannot carry this matrix. Every
+mixed-lane spawn uses `agent_type=default`; `logical_role` and `route_class` remain packet fields.
 Before a spawn, the primary must establish:
 
-1. the requested role is available in the native `spawn_agent` surface;
-2. the request includes `model=gpt-5.6-luna`, `reasoning_effort=max`, and
-   `fork_turns=none`; and
+1. the default carrier is available in the native `spawn_agent` surface;
+2. the task satisfies the selected route class and the request includes the exact resolved
+   `model`, `reasoning_effort`, and `fork_turns=none`; and
 3. the spawn accepts that explicit route.
 
-Role availability and spawn acceptance of the explicit Luna/max request are hard prerequisites
-(hard gates for the delegation). If public spawn or rollout metadata
-explicitly conflicts or shows a fallback, stop the affected delegation. If accepted
-metadata omits model or effort,
-record an `unobservable` warning and continue an ordinary task when there is no
-conflict evidence. There is no silent fallback to another role, model, or effort.
-`priority` has the same warning semantics when it is omitted. The primary model and
-effort are not hard gates for using this skill.
+Role availability and spawn acceptance of the exact resolved route are hard prerequisites.
+If public spawn or rollout metadata explicitly conflicts or shows a fallback, stop the affected
+delegation. If accepted metadata omits model or effort, record an `unobservable` warning and
+continue an ordinary task when there is no conflict evidence. There is no silent fallback to
+another role, model, effort, or provider. `priority` has the same warning semantics when it is
+omitted. The primary model and effort are not hard gates for using this skill.
+
+### Worker route selection
+
+The `worker` mechanical fast-path may use Luna High only when all predicates are satisfied:
+
+- the exact owned file set is known and contains at most two files for the coherent write phase;
+- intent, interfaces, architecture/contracts, authorization, risk, and acceptance are fully settled;
+- there is no cross-package/cross-repository runtime or data-flow reasoning left to perform;
+- there is no dependency/lockfile change, tracked config migration, or generated/legacy reconciliation;
+- there is no ambiguous writer ownership or overlapping dirty state; and
+- one focused local non-browser verification is sufficient to reach the candidate state.
+
+If any predicate is false or unknown, use the normal Terra High worker route. Do not split a larger
+write phase merely to manufacture eligibility for the mechanical fast-path.
+
+### Reviewer route selection
+
+The normal independent-review route is Sol Medium. Escalate to the critical-risk Sol High route when
+the review crosses production authentication or access-control boundaries, secret-handling or
+security-sensitive privilege boundaries, destructive or irreversible data/migration behavior,
+credible data-loss risk, or another explicitly identified high-consequence residual-risk decision.
+The reviewer still recommends; Sol primary accepts or rejects residual risk.
 
 ## Cognitive decision boundary
 
 Sol primary owns intent interpretation, product and architecture contracts, ownership,
 authorization, risk/rollback and irreversible scope, secret handling, option selection,
-final integration, residual-risk acceptance, and final acceptance. Luna roles gather bounded
-evidence under an exact Sol-owned question or execute a decision-complete packet; they do not make, accept, or
-silently widen those decisions. Explorers return evidence and options, reviewers return
+final integration, residual-risk acceptance, and final acceptance. Native roles gather bounded
+evidence under an exact Sol-owned question or execute a decision-complete packet; they do not make,
+accept, or silently widen those decisions. Explorers return evidence and options, reviewers return
 findings and a recommendation, and Sol makes the final choice.
 
 ## Proactive reconnaissance boundary
@@ -84,15 +117,17 @@ space while the explorer is active.
 Use for ambiguous ownership, cross-package data flow, architecture-sensitive questions,
 or legacy/generated-path reconciliation. It is read-only by default and returns the
 smallest evidence-backed option set and tradeoffs for Sol to decide; it does not edit
-product files or choose the final architecture. Use the reconnaissance packet and return
-schema below so competing paths, observations, inferences, and unknowns remain inspectable.
+product files or choose the final architecture. Use Terra High because this role is the
+long-context and architecture-sensitive reconnaissance lane. Use the reconnaissance packet and
+return schema below so competing paths, observations, inferences, and unknowns remain inspectable.
 
 ### `explorer`
 
 Use for bounded code tracing, configuration inspection, dependency lookup, and other
 read-only evidence collection. It should answer the stated question without broad
 cleanup or speculative changes. It returns cited decisive regions and search coverage,
-not a narrative dump or an implementation decision.
+not a narrative dump or an implementation decision. Use Luna High for this frequent,
+bounded, latency-sensitive evidence route.
 
 ### `worker`
 
@@ -105,7 +140,8 @@ than inventing product, architecture, authorization, or risk decisions.
 Product code, repository test code, tracked proxy/config changes, and dependency or lockfile changes
 belong to the worker's coherent write phase. A worker may run the focused local checks required to
 reach its next candidate state; primary may rerun only the narrowest final non-browser acceptance
-subset.
+subset. The normal route is Terra High; Luna High is allowed only through the mechanical fast-path
+predicates above.
 
 When Git work is explicitly authorized, the native worker records the starting branch, base commit,
 and `git status` before editing; stages only explicitly authorized changed files (the exact owned file set);
@@ -137,7 +173,7 @@ to perform it. Authentication is bounded to the repository-declared test credent
 and only after the primary records the target as non-production and keeps authorization in
 scope. Never expose credential values or inspect stored browser passwords, cookies, local storage, or session storage.
 
-For browser/runtime QA, one Luna Max tester owns the session end to end. An exact user-selected
+For browser/runtime QA, one Luna High tester owns the session end to end. An exact user-selected
 browser tool always wins and is preflighted on its own; never silently fall back from that choice.
 For default or generic “browser plugin” QA, probe actual capability rather than infer from OS labels and record the `selected route`,
 availability, and fallback reason before dispatch. Use this ordered ladder: (1) durable
@@ -176,6 +212,7 @@ requirement alone is not a blocker.
 Use only for a high-risk boundary or an explicit user request for independent review.
 It is behaviorally read-only and uses the reviewer RETURN schema in the compact packet. It must
 not implement its own fix or accept residual risk; its verdict is a recommendation for Sol.
+Use Sol Medium normally and Sol High only for the critical-risk predicates above.
 
 ## Writable-host observability for read-only roles
 
@@ -192,13 +229,15 @@ copy. Replace every placeholder before spawning:
 
 ```text
 ROLE
-Act as the <deep_explorer|explorer|worker|tester|reviewer> in Sol Advisor's native
-Luna V2 lane.
+Act as the logical <deep_explorer|explorer|worker|tester|reviewer> in Sol Advisor's native
+mixed-model V2 lane.
 
 ROUTE
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
-model=gpt-5.6-luna
-reasoning_effort=max
+carrier_agent_type=default
+logical_role=<deep_explorer|explorer|worker|tester|reviewer>
+route_class=<default|mechanical-fast-path|normal|critical-risk>
+model=<resolved gpt-5.6-luna|gpt-5.6-terra|gpt-5.6-sol>
+reasoning_effort=<resolved medium|high>
 fork_turns=none
 
 OBJECTIVE
@@ -311,16 +350,16 @@ SOL DECISION NEEDED:
 - <exact choice that remains Sol-owned, or none>
 ```
 
-The primary invokes the native tool explicitly:
+The native spawn API contains only these `spawn_agent` arguments:
 
 ```text
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
-model=gpt-5.6-luna
-reasoning_effort=max
+agent_type=default
+model=<resolved gpt-5.6-luna|gpt-5.6-terra|gpt-5.6-sol>
+reasoning_effort=<resolved medium|high>
 fork_turns=none
 ```
 
-These fields are intentional routing, not a silent fallback.
+The ROUTE packet metadata above is intentional routing, not a silent fallback.
 
 ## Same-agent correction
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Repository-local verification for Sol Advisor 0.6.8.
+# Repository-local verification for Sol Advisor 0.6.9.
 
 set -eu
 
@@ -16,6 +16,7 @@ repo_dir=$(CDPATH= cd "$plugin_dir/../.." && pwd) || exit 1
 installer=$script_dir/install-agents.sh
 runtime_inspector=$script_dir/inspect-agent-runtime.sh
 external_verifier=$script_dir/verify-external-specialist.sh
+model_routing_verifier=$script_dir/verify-model-routing.sh
 templates=$plugin_dir/agents
 manifest=$plugin_dir/.codex-plugin/plugin.json
 skill=$plugin_dir/skills/orchestration/SKILL.md
@@ -30,14 +31,16 @@ trigger_cases=$plugin_dir/skills/orchestration/evals/trigger_cases.json
 robustness_cases=$plugin_dir/skills/orchestration/evals/robustness_cases.json
 allocation_cases=$plugin_dir/skills/orchestration/evals/allocation_cases.json
 semantic_config=$plugin_dir/skills/orchestration/evals/semantic_config.json
+model_routing_cases=$plugin_dir/skills/orchestration/evals/model_routing_cases.json
 
-for required in "$installer" "$runtime_inspector" "$external_verifier" "$manifest" "$skill" "$contracts" \
+for required in "$installer" "$runtime_inspector" "$external_verifier" "$model_routing_verifier" "$manifest" "$skill" "$contracts" \
   "$native_contract" "$luna_contract" "$ui" "$interface" "$skill_manifest" \
-  "$trigger_cases" "$robustness_cases" "$allocation_cases" "$semantic_config"; do
+  "$trigger_cases" "$robustness_cases" "$allocation_cases" "$semantic_config" "$model_routing_cases"; do
   test -f "$required" || fail "required file missing: $required"
 done
 
 sh "$external_verifier"
+sh "$model_routing_verifier"
 
 readme_arg=$readme
 if [ ! -f "$readme" ]; then
@@ -64,7 +67,8 @@ jq empty "$trigger_cases"
 jq empty "$robustness_cases"
 jq empty "$allocation_cases"
 jq empty "$semantic_config"
-python3 - "$manifest" "$skill" "$contracts" "$native_contract" "$luna_contract" "$readme_arg" "$ui" "$interface" "$skill_manifest" "$trigger_cases" "$robustness_cases" "$allocation_cases" "$semantic_config" <<'PY'
+jq empty "$model_routing_cases"
+python3 - "$manifest" "$skill" "$contracts" "$native_contract" "$luna_contract" "$readme_arg" "$ui" "$interface" "$skill_manifest" "$trigger_cases" "$robustness_cases" "$allocation_cases" "$semantic_config" "$model_routing_cases" <<'PY'
 from pathlib import Path
 import json
 import re
@@ -72,10 +76,10 @@ import sys
 
 manifest_path, *paths = sys.argv[1:]
 doc_paths = paths[:6]
-interface_path, skill_manifest_path, trigger_cases_path, robustness_cases_path, allocation_cases_path, semantic_config_path = paths[6:]
+interface_path, skill_manifest_path, trigger_cases_path, robustness_cases_path, allocation_cases_path, semantic_config_path, model_routing_cases_path = paths[6:]
 manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-if manifest.get("version") != "0.6.8":
-    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.8")
+if manifest.get("version") != "0.6.9":
+    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.9")
 prompts = manifest.get("interface", {}).get("defaultPrompt")
 if not isinstance(prompts, list) or not prompts or not all(isinstance(p, str) and p.strip() for p in prompts):
     raise SystemExit("manifest defaultPrompt must be a non-empty list of strings")
@@ -105,6 +109,7 @@ trigger_cases = json.loads(Path(trigger_cases_path).read_text(encoding="utf-8"))
 robustness_cases = json.loads(Path(robustness_cases_path).read_text(encoding="utf-8"))
 allocation_cases = json.loads(Path(allocation_cases_path).read_text(encoding="utf-8"))
 semantic_config = json.loads(Path(semantic_config_path).read_text(encoding="utf-8"))
+model_routing_cases = json.loads(Path(model_routing_cases_path).read_text(encoding="utf-8"))
 
 def validate_case_suite(name, suite, buckets):
     seen = {}
@@ -171,7 +176,7 @@ seen_texts = set()
 for index, item in enumerate(allocation_items):
     if not isinstance(item, dict):
         raise SystemExit(f"allocation case {index} must be an object")
-    for field in ("id", "text", "decision_owner", "execution_route", "luna_scope", "expected_outcome"):
+    for field in ("id", "text", "decision_owner", "execution_route", "delegated_scope", "expected_outcome"):
         if not isinstance(item.get(field), str) or not item[field].strip():
             raise SystemExit(f"allocation case {index} needs non-empty string {field}")
     if item["id"] in seen_ids or item["text"] in seen_texts:
@@ -183,10 +188,10 @@ for index, item in enumerate(allocation_items):
     route = item["execution_route"]
     if route not in allowed_routes:
         raise SystemExit(f"allocation case {item['id']} has unknown route {route!r}")
-    if route in delegated_routes and item["luna_scope"] == "none":
-        raise SystemExit(f"delegated allocation case {item['id']} needs a bounded Luna scope")
-    if route in {"primary", "blocked"} and item["luna_scope"] != "none":
-        raise SystemExit(f"non-delegated allocation case {item['id']} must use luna_scope=none")
+    if route in delegated_routes and item["delegated_scope"] == "none":
+        raise SystemExit(f"delegated allocation case {item['id']} needs a bounded delegated scope")
+    if route in {"primary", "blocked"} and item["delegated_scope"] != "none":
+        raise SystemExit(f"non-delegated allocation case {item['id']} must use delegated_scope=none")
 required_allocation_ids = {
     "ambiguous_api_ui_contract",
     "exact_bounded_refactor",
@@ -277,7 +282,7 @@ required_outcome_phrases = {
         "no repository evidence question remains",
     ),
     "unknown_secret_rotation": ("never delegate",),
-    "contradictory_execution_packet": ("no Luna execution role invents",),
+    "contradictory_execution_packet": ("no delegated execution role invents",),
     "cross_repo_write_phase": ("coherent cross-repository write phase", "worker owns"),
     "exact_named_chrome_route": ("exact named Chrome route", "no fallback", "required acceptance evidence"),
     "generic_browser_plugin_chrome": ("capability probing", "selected route", "fallback reason", "otherwise block"),
@@ -451,12 +456,12 @@ for key, value in (
 if "openai:" not in interface_text or "Native V2" not in interface_text:
     raise SystemExit("interface.yaml missing native V2 openai degradation")
 for key, expected in (
-    ("version", "0.6.8"),
+    ("version", "0.6.9"),
     ("owner", "wwwk893"),
-    ("updated_at", "2026-08-28"),
+    ("updated_at", "2026-08-31"),
     ("lifecycle_stage", "production"),
     ("context_budget_tier", "production"),
-    ("review_cadence", "runtime/routing changes"),
+    ("review_cadence", "per-release"),
 ):
     if skill_manifest.get(key) != expected:
         raise SystemExit(f"skill manifest {key} does not equal {expected!r}")
@@ -498,7 +503,7 @@ for role in roles:
     if any(role not in document for document in contract_docs):
         raise SystemExit(f"native role {role} is not documented in every required contract")
 for tool in tools:
-    if tool not in skill or tool not in native:
+    if tool not in native:
         raise SystemExit(f"native tool {tool} is missing from the default lane")
 for token in ("decision-complete", "packet and review overhead"):
     if not all(token in document for document in contract_docs):
@@ -536,19 +541,20 @@ for token in (
         raise SystemExit(f"decision-complete task packet is missing {token!r}")
 for token in (
     "gpt-5.6-luna",
-    "max",
-    "priority",
-    "hard prerequisites",
+    "gpt-5.6-terra",
+    "gpt-5.6-sol",
     "silent fallback",
     "fork_turns=none",
-    "same child",
+    "agent_type=default",
+    "logical_role",
 ):
     if token not in skill or token not in contracts or token not in native:
         raise SystemExit(f"native routing contract is missing {token!r}")
-for field in ("model=gpt-5.6-luna", "reasoning_effort=max", "fork_turns=none"):
-    for document, label in ((skill, "SKILL"), (contracts, "role contracts"), (native, "native lane")):
-        if field not in document:
-            raise SystemExit(f"{label} lacks explicit native route field {field!r}")
+for token in ("priority", "hard prerequisites", "same child"):
+    if token not in contracts or token not in native:
+        raise SystemExit(f"detailed native routing contract is missing {token!r}")
+if model_routing_cases.get("suite") != "Balanced native model routing holdout":
+    raise SystemExit("model routing cases have the wrong suite name")
 for token in ("same child", "bounded repair/test-only", "otherwise return a blocker"):
     if token not in contracts or token not in native:
         raise SystemExit(f"tester/correction contract is missing {token!r}")
@@ -661,10 +667,10 @@ for token in (
     if token.lower() not in contracts.lower():
         raise SystemExit(f"tester runtime readiness packet is missing {token!r}")
 for token in ("narrowest decisive acceptance subset", "risk or impact warrants"):
-    if token not in skill or token not in contracts or token not in native:
+    if token not in contracts or token not in native:
         raise SystemExit(f"acceptance subset contract is missing {token!r}")
 for token in ("local, non-browser checks", "browser/runtime QA", "same tester"):
-    if not all(token in document for document in contract_docs):
+    if not all(token in document for document in (contracts, native)):
         raise SystemExit(f"tester-owned browser acceptance contract is missing {token!r}")
 for token in (
     "$chrome:control-chrome",
@@ -681,8 +687,8 @@ for token in (
     "headless",
     "isolated",
 ):
-    if token not in skill:
-        raise SystemExit(f"SKILL browser-routing summary is missing {token!r}")
+    if not all(token in document for document in (contracts, native)):
+        raise SystemExit(f"detailed browser-routing contract is missing {token!r}")
 for token in (
     "tab.playwright",
     "Settings -> Computer use",
@@ -722,7 +728,7 @@ for token in (
 ):
     if token.lower() not in luna.lower():
         raise SystemExit(f"Luna compatibility contract missing {token}")
-if "default" not in ui.lower() or "native luna v2" not in ui.lower():
+if "default" not in ui.lower() or "native v2" not in ui.lower() or "default carrier" not in ui.lower():
     raise SystemExit("openai metadata does not describe the native V2 default")
 if readme and ("default" not in readme.lower() or "legacy" not in readme.lower()):
     raise SystemExit("README does not separate default and legacy lanes")
@@ -743,7 +749,7 @@ print(
     f"{len(robustness_cases['should_not_trigger'])} opt-out)"
 )
 PY
-pass "0.6.8 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
+pass "0.6.9 metadata, Sol-primary allocation fixture, model-routing holdout, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -1017,4 +1023,4 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$null_id" >/dev/n
 fi
 pass "runtime inspector rejects null sandbox, permission, and cwd metadata"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.8 native Luna V2 checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.9 native mixed-model V2 checks completed in $tmp_dir"

@@ -1,7 +1,7 @@
 interface:
   display_name: "Sol Advisor Orchestration"
-  short_description: "Default routing: Sol owns critical judgment; native Luna V2 executes decision-complete work"
-  default_prompt: "Route through $sol-advisor:orchestration; keep critical judgment in Sol and bounded execution in Luna Max."
+  short_description: "Default routing: Sol owns critical judgment; native V2 uses a default carrier with logical-role model routing"
+  default_prompt: "Route through $sol-advisor:orchestration; keep Sol judgment and use the balanced default-carrier native matrix."
 compatibility:
   canonical_format: "codex-plugin-skill"
   adapter_targets:
@@ -17,4 +17,4 @@ compatibility:
     remote_inline_execution: "forbid"
     remote_metadata_policy: "allow-metadata-only"
   degradation:
-    openai: "Native V2 is required by default; app-task Luna and Terra/Sol are explicit compatibility lanes."
+    openai: "Native V2 is required by default; app-task Luna and legacy Terra/Sol companion roles are explicit compatibility lanes."

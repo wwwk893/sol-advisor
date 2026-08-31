@@ -1,6 +1,6 @@
-# Native Luna V2 lane
+# Native mixed-model V2 lane
 
-This is the normative default workflow for Sol Advisor. Legacy Terra/Sol and app-task
+This is the normative default workflow for Sol Advisor. Legacy Terra/Sol companion roles and app-task
 paths are compatibility lanes, not this default. The native lane uses the host's native
 `spawn_agent`, `list_agents`, `wait_agent`, `followup_task`, `send_message`, and
 `interrupt_agent` semantics. It does not require `list_projects`, `create_thread`, or
@@ -8,20 +8,48 @@ other app-task tools, and it does not install or remove custom-agent TOMLs.
 
 ## Runtime contract
 
-The available role names are `deep_explorer`, `explorer`, `worker`, `tester`, and
-`reviewer`. The primary explicitly requests `gpt-5.6-luna` with `max` effort. Role
-availability and spawn acceptance of that explicit route are hard prerequisites. If
-public spawn or rollout metadata explicitly conflicts or shows a fallback, stop; if
-accepted metadata omits model or effort, record an `unobservable` warning and continue
-ordinary work when no conflict evidence exists. There is no silent fallback. `priority`
-has the same warning semantics when omitted. The primary model and effort are
-informational and are not a hard stop.
+The five logical role names are `deep_explorer`, `explorer`, `worker`, `tester`, and
+`reviewer`. Resolve the logical role before the model route, then pin the exact balanced route:
+
+| Role / class | Model | Effort |
+|---|---|---|
+| `explorer` | `gpt-5.6-luna` | `high` |
+| `deep_explorer` | `gpt-5.6-terra` | `high` |
+| `worker` mechanical fast-path | `gpt-5.6-luna` | `high` |
+| `worker` normal | `gpt-5.6-terra` | `high` |
+| `tester` | `gpt-5.6-luna` | `high` |
+| `reviewer` normal | `gpt-5.6-sol` | `medium` |
+| `reviewer` critical-risk | `gpt-5.6-sol` | `high` |
+
+Role availability and spawn acceptance of the exact resolved route are hard prerequisites. If
+public spawn or rollout metadata explicitly conflicts or shows a fallback, stop; if accepted
+metadata omits model or effort, record an `unobservable` warning and continue ordinary work when
+no conflict evidence exists. There is no silent fallback. `priority` has the same warning semantics
+when omitted. The primary model and effort are informational and are not a hard stop.
+
+The specialized `agent_type` presets are immutable Luna/Max carriers, so they cannot honestly
+carry this matrix. Every mixed-lane spawn uses `agent_type=default`, explicit resolved model and
+effort, and `fork_turns=none`; the packet carries `logical_role` and `route_class`. Do not call a
+specialized preset and claim it was overridden. If the default carrier or exact route is unavailable,
+return `blocked` with no fallback.
+
+The worker mechanical fast-path may use Luna High only when the exact owned files are known, the
+coherent write phase contains at most two files, all decisions and interfaces are settled, no
+cross-package/cross-repository reasoning remains, there is no dependency/lockfile change, tracked
+config migration, or generated/legacy reconciliation, writer ownership is unambiguous, and one
+focused local non-browser check is sufficient. Any false or unknown predicate routes the whole
+coherent write phase to Terra High. Never split a larger phase solely to qualify for the fast-path.
+
+The reviewer defaults to Sol Medium. Use the critical-risk Sol High route for production
+authentication or access-control boundaries, secret-handling or security-sensitive privilege
+boundaries, destructive or irreversible data/migration behavior, credible data-loss risk, or an
+explicitly identified high-consequence residual-risk decision.
 
 The primary uses one selected role from this set; choose the smallest role that fits the request.
 Sol keeps intent, architecture/contracts, authorization, risk/rollback, irreversible scope,
-option selection, integration, residual-risk acceptance, and final acceptance. Luna receives an
-exact Sol-owned question for bounded evidence or a decision-complete execution packet. Judge
-delegation at a coherent write phase: the related repository mutations needed for the next
+option selection, integration, residual-risk acceptance, and final acceptance. Native children
+receive an exact Sol-owned question for bounded evidence or a decision-complete execution packet.
+Judge delegation at a coherent write phase: the related repository mutations needed for the next
 independently acceptable candidate state. `worker` is the default for a decision-complete
 repository write phase; do not atomize multi-file or cross-repository work into tiny steps.
 If an execution decision is not settled, gather evidence only or return `blocked`; never delegate
@@ -33,7 +61,7 @@ active worker writer; then the tester is the sole writer for that owned set. Rea
 be run concurrently when their ownership does not overlap. In a shared worktree, never run two
 writers at once. Three concurrent children is a suggested default ceiling, not a hard limit.
 
-Detailed role, reconnaissance, packet, and return contracts live in
+Detailed role, reconnaissance, packet, route-class, and return contracts live in
 [role-contracts.md](role-contracts.md).
 
 Tracked product tests, proxy/config changes, and dependency or lockfile changes stay in the
@@ -86,7 +114,10 @@ After any required reconnaissance, the primary resolves intent, architecture/con
 authorization, risk/rollback, irreversible scope, ownership, option selection, and acceptance evidence.
 Choose the smallest role: explorers for unresolved evidence questions, worker for settled implementation,
 tester for focused runtime evidence, and reviewer only for a high-risk boundary or an
-explicit user request. A tester does not change product code by default; its only bounded repair/test-only
+explicit user request. Resolve the role's route class next: mechanical-fast-path versus normal for a
+worker, normal versus critical-risk for a reviewer, and default for the other roles.
+
+A tester does not change product code by default; its only bounded repair/test-only
 exception requires explicit repair authorization, exact file ownership, a failed relevant check, and no active
 worker writer; otherwise return a blocker.
 A primary micro-edit may stay in the primary session only when it is one repository, one
@@ -121,16 +152,19 @@ observable signals. The worker owns tracked setup; tester owns reversible runtim
 no-diff preinstalled materialization, the resolved browser session, server lifecycle, and evidence.
 
 Build a compact packet from
-[role-contracts.md](role-contracts.md). State `fork_turns: none`, exact owned files,
-interfaces, constraints, verification commands, and a structured return. Do not copy
-the entire conversation, prompt history, or full diff.
+[role-contracts.md](role-contracts.md). State the exact role, route class, resolved model,
+resolved effort, `fork_turns: none`, exact owned files, interfaces, constraints, verification commands,
+and a structured return. Do not copy the entire conversation, prompt history, or full diff.
 
-The spawn shape is:
+Put these fields in the task packet's ROUTE metadata, not the spawn API:
 
 ```text
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
-model=gpt-5.6-luna
-reasoning_effort=max
+ROUTE
+carrier_agent_type=default
+logical_role=<deep_explorer|explorer|worker|tester|reviewer>
+route_class=<default|mechanical-fast-path|normal|critical-risk>
+model=<resolved gpt-5.6-luna|gpt-5.6-terra|gpt-5.6-sol>
+reasoning_effort=<resolved medium|high>
 fork_turns=none
 ```
 
@@ -138,19 +172,28 @@ The compact task packet and reviewer return schema are defined in `role-contract
 
 ### PREFLIGHT
 
-Inspect the native tool's actual role surface and prepare the explicit route fields.
-Require the exact role and an accepted spawn request with `model=gpt-5.6-luna`,
-`reasoning_effort=max`, and `fork_turns=none`; stop if the role is unavailable or the
-spawn rejects the request. If accepted public metadata or rollout evidence conflicts or
-shows a fallback, stop; if fields are omitted, emit an `unobservable` warning rather
-than blocking an ordinary task. Capture `priority` when exposed, otherwise warn. Confirm
-the shared-worktree writer slot is free.
+Inspect the native tool's actual carrier surface and prepare the explicit route fields.
+Require the default carrier and an accepted spawn request with the logical-role and route-class-specific model,
+reasoning effort, and `fork_turns=none`; stop if the carrier is unavailable or the spawn rejects the
+request. If accepted public metadata or rollout evidence conflicts or shows a fallback, stop; if
+fields are omitted, emit an `unobservable` warning rather than blocking an ordinary task. Capture
+`priority` when exposed, otherwise warn. Confirm the shared-worktree writer slot is free. Re-evaluate
+worker fast-path and reviewer critical-risk predicates immediately before spawn; unknown predicates
+choose the safer normal route rather than a cheaper or weaker one.
 
 ### SPAWN
 
-Call `spawn_agent` with the selected `agent_type`, `model=gpt-5.6-luna`,
-`reasoning_effort=max`, and `fork_turns=none`. This explicit route is intentional, not a
-fallback. Do not use an app task, nested CLI, or legacy Terra/Sol role in this lane.
+The native spawn API contains only these `spawn_agent` arguments:
+
+```text
+agent_type=default
+model=<resolved gpt-5.6-luna|gpt-5.6-terra|gpt-5.6-sol>
+reasoning_effort=<resolved medium|high>
+fork_turns=none
+```
+
+This explicit route is intentional, not a fallback. Do not use a specialized preset, app task,
+nested CLI, or legacy Terra/Sol companion role in this lane.
 
 ### MONITOR
 
@@ -191,7 +234,9 @@ no forbidden external mutation or secret handling occurred.
 ### REVIEW (optional)
 
 For high-risk changes or an explicit review request, spawn `reviewer` with a fresh
-`fork_turns: none` packet and require the reviewer return schema from `role-contracts.md`.
+`fork_turns: none` packet and require the reviewer return schema from `role-contracts.md`. Resolve
+normal Sol Medium versus critical-risk Sol High before spawn; do not escalate merely because a
+review exists, and do not keep Medium when the critical-risk predicates apply.
 Capture actual model, effort, sandbox, and permission metadata for every behaviorally read-only
 role; if the host reports `danger-full-access`, report that writable profile, compare exact
 before/after state, and fail on mutation. Any mutation invalidates the result and requires a fresh

@@ -6,7 +6,7 @@
       "text": "The API and UI acceptance documents disagree, and the active runtime path, owners, callers, and relevant tests are not yet known. Gather the repository evidence needed to decide which contract to implement.",
       "decision_owner": "sol",
       "execution_route": "deep_explorer",
-      "luna_scope": "Map the competing contracts, actual callers and runtime paths, ownership, tests, and tradeoffs with cited evidence; label observations, inferences, contradictions, and unknowns. Sol chooses the contract.",
+      "delegated_scope": "Map the competing contracts, actual callers and runtime paths, ownership, tests, and tradeoffs with cited evidence; label observations, inferences, contradictions, and unknowns. Sol chooses the contract.",
       "expected_outcome": "No implementation packet is issued until Sol resolves the contract after reading the cited competing paths; the primary does not exhaust the same repository search first."
     },
     {
@@ -14,7 +14,7 @@
       "text": "The exact two files, settled label change, interfaces, and focused test are already known. Apply the refactor and run the named check.",
       "decision_owner": "sol",
       "execution_route": "worker",
-      "luna_scope": "Apply the exact owned-file change and focused check within the settled contract; do not add a reconnaissance hop when the location and contract are already known.",
+      "delegated_scope": "Apply the exact owned-file change and focused check within the settled contract; do not add a reconnaissance hop when the location and contract are already known.",
       "expected_outcome": "The worker returns the diff and evidence; Sol inspects and accepts without first spawning an explorer for already-settled facts."
     },
     {
@@ -22,7 +22,7 @@
       "text": "A user asks to fix behavior in an unfamiliar repository, but the implementation location, real runtime path, callers, relevant tests, and configuration are unknown. Trace the active path and report the smallest decisive regions before any implementation choice.",
       "decision_owner": "sol",
       "execution_route": "explorer",
-      "luna_scope": "Search the bounded subsystem, trace callers and configuration to the active implementation, and return path:line evidence, runtime path, tests, coverage, contradictions, and read-next regions without choosing or implementing a fix.",
+      "delegated_scope": "Search the bounded subsystem, trace callers and configuration to the active implementation, and return path:line evidence, runtime path, tests, coverage, contradictions, and read-next regions without choosing or implementing a fix.",
       "expected_outcome": "Sol uses the evidence to decide the change location; primary seed inspection frames the question but does not perform the repository-wide trace itself."
     },
     {
@@ -30,7 +30,7 @@
       "text": "Reproduce the known staging timeout in the declared non-production environment and capture logs and network evidence.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Run the settled reproduction and capture evidence; do not accept residual risk.",
+      "delegated_scope": "Run the settled reproduction and capture evidence; do not accept residual risk.",
       "expected_outcome": "The same tester returns runtime evidence and Sol decides acceptance or correction."
     },
     {
@@ -38,7 +38,7 @@
       "text": "Test this UI in a browser and capture runtime evidence; no browser tool was explicitly selected, so capability must be probed.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Probe actual capabilities and record the selected route, availability, and fallback reason; use the ordered desktop Chrome, registered headless chrome-devtools-mcp, then already-installed Playwright CLI ladder.",
+      "delegated_scope": "Probe actual capabilities and record the selected route, availability, and fallback reason; use the ordered desktop Chrome, registered headless chrome-devtools-mcp, then already-installed Playwright CLI ladder.",
       "expected_outcome": "The tester owns browser QA while Sol inspects evidence; capability-first routing records the selected route and any fallback reason without auto-installing tools."
     },
     {
@@ -46,7 +46,7 @@
       "text": "Run browser QA: the desktop Chrome extension is unavailable, registered chrome-devtools-mcp exists but local Chrome is missing or unsupported, and no installed runnable Playwright CLI is available.",
       "decision_owner": "sol",
       "execution_route": "blocked",
-      "luna_scope": "none",
+      "delegated_scope": "none",
       "expected_outcome": "Block with exact per-capability evidence for the unavailable desktop extension, unsupported/missing local Chrome, and absent Playwright CLI; point to Settings -> Computer use and do not install, upgrade, or silently switch routes during an ordinary run."
     },
     {
@@ -54,7 +54,7 @@
       "text": "Default browser QA finds the desktop Chrome extension and Chrome-family browser-client available.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Use $chrome:control-chrome with the available Chrome extension and Chrome-family browser-client; record desktop Chrome as the selected route before browser action.",
+      "delegated_scope": "Use $chrome:control-chrome with the available Chrome extension and Chrome-family browser-client; record desktop Chrome as the selected route before browser action.",
       "expected_outcome": "Select the desktop Chrome route first, record the selected route and its availability/evidence, and keep Sol acceptance; do not probe lower routes once this capability is ready."
     },
     {
@@ -62,7 +62,7 @@
       "text": "Default browser QA runs on a VPS/headless host with supported stable Chrome and registered chrome-devtools-mcp available.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Use the officially registered chrome-devtools-mcp with supported local stable Chrome in headless isolated mode; record VPS/headless selection and readiness evidence.",
+      "delegated_scope": "Use the officially registered chrome-devtools-mcp with supported local stable Chrome in headless isolated mode; record VPS/headless selection and readiness evidence.",
       "expected_outcome": "Select the VPS/headless Chrome DevTools MCP route when desktop Chrome is unavailable, record the selected route, availability, and fallback reason, and keep Sol acceptance."
     },
     {
@@ -70,7 +70,7 @@
       "text": "Default browser QA has no usable Chrome extension or Chrome DevTools MCP, but an already-installed runnable Playwright CLI is available.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Verify the existing Playwright CLI is installed and runnable, then use it only as the last fallback; do not run npx, download browsers, or install a tool.",
+      "delegated_scope": "Verify the existing Playwright CLI is installed and runnable, then use it only as the last fallback; do not run npx, download browsers, or install a tool.",
       "expected_outcome": "Use the already-installed Playwright CLI only as the last fallback after higher routes are unavailable, record the selected route and fallback reason, and preserve required evidence."
     },
     {
@@ -78,7 +78,7 @@
       "text": "Default browser QA finds no available Chrome extension, registered Chrome DevTools MCP, or runnable installed Playwright CLI.",
       "decision_owner": "sol",
       "execution_route": "blocked",
-      "luna_scope": "none",
+      "delegated_scope": "none",
       "expected_outcome": "block with the exact missing capabilities and return to Sol; do not install, download, or silently switch browser tools."
     },
     {
@@ -86,7 +86,7 @@
       "text": "The user explicitly selects a named browser tool for this task and that tool is unavailable.",
       "decision_owner": "sol",
       "execution_route": "blocked",
-      "luna_scope": "none",
+      "delegated_scope": "none",
       "expected_outcome": "Honor the exact named tool, report its availability failure, and block with no fallback to Chrome DevTools MCP or Playwright CLI."
     },
     {
@@ -94,7 +94,7 @@
       "text": "A headless browser route reaches human-visible auth/CAPTCHA, user-controlled MFA/biometric, physical presence, or an existing desktop-session requirement.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Stop headless automation at the human-auth boundary and return the exact escalation to Sol for a desktop Chrome route; do not bypass or inspect stored auth state.",
+      "delegated_scope": "Stop headless automation at the human-auth boundary and return the exact escalation to Sol for a desktop Chrome route; do not bypass or inspect stored auth state.",
       "expected_outcome": "Escalate human-visible authentication to desktop Chrome, preserve evidence boundaries, and never bypass MFA/CAPTCHA or inspect stored auth state."
     },
     {
@@ -102,7 +102,7 @@
       "text": "The accepted diff, exact files, commit message, main target, and non-force push are authorized.",
       "decision_owner": "sol",
       "execution_route": "worker",
-      "luna_scope": "Perform the exact Git closeout and report branch, SHA, tree, and readback evidence.",
+      "delegated_scope": "Perform the exact Git closeout and report branch, SHA, tree, and readback evidence.",
       "expected_outcome": "Sol verifies the remote SHA, tree, and readback before acceptance."
     },
     {
@@ -110,7 +110,7 @@
       "text": "Resolve the named bug with the exact transition, comment, assignment, and fixVersion already authorized.",
       "decision_owner": "sol",
       "execution_route": "worker",
-      "luna_scope": "Perform read-before-write Jira mechanics and return the post-write readback.",
+      "delegated_scope": "Perform read-before-write Jira mechanics and return the post-write readback.",
       "expected_outcome": "Any issue, type, status, or field ambiguity blocks and returns to Sol."
     },
     {
@@ -118,7 +118,7 @@
       "text": "Choose whether to accept the residual risk of a production authentication rollout.",
       "decision_owner": "sol",
       "execution_route": "reviewer",
-      "luna_scope": "Report independent findings, recommendation, validated gaps, and residual risk only.",
+      "delegated_scope": "Report independent findings, recommendation, validated gaps, and residual risk only.",
       "expected_outcome": "Sol alone chooses rollout and accepts or rejects residual risk."
     },
     {
@@ -126,7 +126,7 @@
       "text": "Compare current official dependency documentation and present supported adoption options.",
       "decision_owner": "sol",
       "execution_route": "explorer",
-      "luna_scope": "Collect primary-source facts, compatibility evidence, and bounded options.",
+      "delegated_scope": "Collect primary-source facts, compatibility evidence, and bounded options.",
       "expected_outcome": "Sol chooses whether and how the dependency is adopted."
     },
     {
@@ -134,7 +134,7 @@
       "text": "Tell me the current branch and whether the worktree is clean.",
       "decision_owner": "sol",
       "execution_route": "primary",
-      "luna_scope": "none",
+      "delegated_scope": "none",
       "expected_outcome": "Keep the task primary-only because delegation overhead exceeds the saved context."
     },
     {
@@ -142,7 +142,7 @@
       "text": "The exact file is already open, the runtime path and contract are known, and the user asks to change one settled word and run the one-line check.",
       "decision_owner": "sol",
       "execution_route": "primary",
-      "luna_scope": "none",
+      "delegated_scope": "none",
       "expected_outcome": "Keep the tightly coupled edit primary-only; proactive reconnaissance is skipped because no repository evidence question remains."
     },
     {
@@ -150,7 +150,7 @@
       "text": "Rotate a credential, but the account, environment, target, and rollback are unknown.",
       "decision_owner": "sol",
       "execution_route": "blocked",
-      "luna_scope": "none",
+      "delegated_scope": "none",
       "expected_outcome": "Request the missing authority and target; never delegate or infer secret handling."
     },
     {
@@ -158,15 +158,15 @@
       "text": "Implement and deploy now, but the packet names two incompatible architectures and no acceptance target.",
       "decision_owner": "sol",
       "execution_route": "blocked",
-      "luna_scope": "none",
-      "expected_outcome": "Return the contradiction to Sol; no Luna execution role invents the decision."
+      "delegated_scope": "none",
+      "expected_outcome": "Return the contradiction to Sol; no delegated execution role invents the decision."
     },
     {
       "id": "cross_repo_write_phase",
       "text": "Implement the settled fix and tracked regression tests across the two named repositories while preserving unrelated dirty files.",
       "decision_owner": "sol",
       "execution_route": "worker",
-      "luna_scope": "Own the coherent cross-repository write phase, including tracked tests/config changes and focused checks, in one decision-complete packet.",
+      "delegated_scope": "Own the coherent cross-repository write phase, including tracked tests/config changes and focused checks, in one decision-complete packet.",
       "expected_outcome": "The worker owns the coherent cross-repository write phase; Sol inspects the candidate state and accepts it."
     },
     {
@@ -174,7 +174,7 @@
       "text": "Run browser QA with the exact user-selected $chrome:control-chrome tool and capture runtime evidence.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Use the explicitly selected $chrome:control-chrome Chrome-family browser-client end to end; preflight it on its own and do not substitute another route or standalone Playwright.",
+      "delegated_scope": "Use the explicitly selected $chrome:control-chrome Chrome-family browser-client end to end; preflight it on its own and do not substitute another route or standalone Playwright.",
       "expected_outcome": "The tester uses the exact named Chrome route while Sol inspects evidence; exact tool choice wins with no fallback and does not waive required acceptance evidence."
     },
     {
@@ -182,7 +182,7 @@
       "text": "The user asks to test the UI with a generic ‘browser plugin’ phrase and no exact browser tool name, so capability-first routing applies.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Probe actual capabilities, then use desktop $chrome:control-chrome first, registered headless chrome-devtools-mcp second, or an already-installed runnable Playwright CLI last.",
+      "delegated_scope": "Probe actual capabilities, then use desktop $chrome:control-chrome first, registered headless chrome-devtools-mcp second, or an already-installed runnable Playwright CLI last.",
       "expected_outcome": "Resolve the generic phrase through capability probing; record readiness, selected route, availability, and fallback reason, otherwise block; Sol inspects evidence."
     },
     {
@@ -190,7 +190,7 @@
       "text": "After the durable default is established, the user explicitly selects $browser:control-in-app-browser for this task's browser QA.",
       "decision_owner": "sol",
       "execution_route": "tester",
-      "luna_scope": "Retain the exact later non-Chrome selection and use its browser-client and required extension/client end to end; preflight it on its own and do not reimpose Chrome or use a fallback.",
+      "delegated_scope": "Retain the exact later non-Chrome selection and use its browser-client and required extension/client end to end; preflight it on its own and do not reimpose Chrome or use a fallback.",
       "expected_outcome": "The exact non-Chrome override is retained with no fallback; readiness checks the selected tool/client before the tester runs QA while Sol inspects evidence."
     },
     {
@@ -198,7 +198,7 @@
       "text": "Run browser QA, but browser readiness is incomplete: the target URL, candidate code state, server health, and cleanup owner are not yet settled.",
       "decision_owner": "sol",
       "execution_route": "blocked",
-      "luna_scope": "none",
+      "delegated_scope": "none",
       "expected_outcome": "Block before the first browser action until readiness is complete; do not let the tester invent missing environment or product decisions."
     }
   ]
