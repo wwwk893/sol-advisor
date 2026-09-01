@@ -1,7 +1,7 @@
 {
   "name": "sol-advisor",
-  "version": "0.6.8",
-  "description": "Codex-native workflow that reserves high-value judgment for Sol and delegates decision-complete bounded execution to Luna V2.",
+  "version": "0.7.0",
+  "description": "Codex-native 0.7.0 workflow that reserves high-value judgment for Sol and delegates bounded execution to Luna V2 under active-child scope locks and terminal coordination barriers.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/wwwk893/sol-advisor#readme",
   "repository": "https://github.com/wwwk893/sol-advisor",
@@ -10,12 +10,12 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sol Advisor",
-    "shortDescription": "Sol owns critical judgment; native Luna V2 executes decision-complete bounded work.",
-    "longDescription": "Sol Advisor routes every request by default. Sol primary keeps intent, architecture/contracts, authorization, risk, option selection, integration, and acceptance; native Luna V2 proactively gathers cited repository evidence when the real runtime path or implementation location is unknown, then receives exact bounded questions or a decision-complete coherent repository write phase. Atomic one-file micro-edits may stay primary only when the strict micro-edit boundary holds; multi-file and cross-repository phases go to a worker. Browser/runtime QA honors an exact user-selected tool without fallback; default or generic QA probes capabilities and uses the desktop Chrome extension, registered headless chrome-devtools-mcp, then an already-installed runnable Playwright CLI as last fallback, or blocks with exact missing capabilities. App-task Luna and legacy Terra/Sol remain explicit compatibility options.",
+    "shortDescription": "0.7.0: Sol owns judgment; native Luna V2 runs bounded work under scope locks and terminal barriers.",
+    "longDescription": "Sol Advisor 0.7.0 routes every request by default. Sol primary keeps intent, architecture/contracts, authorization, risk, option selection, integration, and acceptance; native Luna V2 proactively gathers cited repository evidence when the real runtime path or implementation location is unknown, then receives exact bounded questions or a decision-complete coherent repository write phase. Each child has an active-child ownership ledger, and dependent phases wait for terminal predecessors before handoff inspection or acceptance. Atomic one-file micro-edits may stay primary only when the strict micro-edit boundary holds; multi-file and cross-repository phases go to a worker. Browser/runtime QA honors an exact user-selected tool without fallback; default or generic QA probes capabilities and uses the desktop Chrome extension, registered headless chrome-devtools-mcp, then an already-installed runnable Playwright CLI as last fallback, or blocks with exact missing capabilities. App-task Luna and legacy Terra/Sol remain explicit compatibility options.",
     "developerName": "wwwk893 (maintainer; original author Daniel McAteer)",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "websiteURL": "https://github.com/wwwk893/sol-advisor",
-    "defaultPrompt": ["Route through Sol Advisor; keep high-value judgment in Sol and delegate decision-complete execution to Luna Max.", "Use app-task Luna or legacy Terra/Sol only when I explicitly authorize compatibility."]
+    "defaultPrompt": ["Route through Sol Advisor 0.7.0; keep judgment in Sol and delegate Luna Max work under ownership locks and terminal barriers.", "Use app-task Luna or legacy Terra/Sol only when I explicitly authorize compatibility."]
   }
 }

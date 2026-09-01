@@ -1,0 +1,57 @@
+{
+  "schema_version": "0.7.0-output-quality-scorecard-v1",
+  "release": "0.7.0",
+  "fixture": {
+    "type": "file-backed fixture",
+    "path": "evals/coordination_cases.json",
+    "sanitized": true
+  },
+  "baseline": {
+    "release": "0.6.8",
+    "commit": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3",
+    "deterministic_basis": "The unchanged route, robustness, safety, and coordination input contracts are the comparison basis; no runtime A/B measurement was run."
+  },
+  "candidate": {
+    "release": "0.7.0",
+    "deterministic_basis": "A pure evaluator computes each file-backed state/action transition, including the primary ledger gate, role-action ownership, Sol-ledger tester repair authorization, fixed explorer-only evidence-role admission, child-covered handoff scope, typed/non-empty evidence contexts, resolved handoff provenance, and relevant/rescope-only terminal filtering; expected values are fixture oracles, not the evaluator decision source."
+  },
+  "computed_state_transition_evidence": {
+    "fixture_cases": 73,
+    "computed_fixture_violations": 0,
+    "expected_oracle_matches": true,
+    "mutation_checks": 50,
+    "evaluator_scope": "instruction-contract evidence, not runtime scheduler enforcement; computed handoff provenance, child-to-handoff scope coverage, fixed evidence-role admission, typed/non-empty evidence contexts, and Sol-ledger repair authorization"
+  },
+  "required_gates": {
+    "zero_same_scope_active_child_overlap": {
+      "computed_fixture_violations": 0,
+      "status": "pass",
+      "evidence": "Computed evaluator rejects unlisted primary work and primary/cross-role same-scope overlap while allowing only declared orthogonal scope and role-safe continuation."
+    },
+    "zero_preterminal_dependent_phase_or_acceptance": {
+      "computed_fixture_violations": 0,
+      "status": "pass",
+      "evidence": "Computed evaluator waits for all acceptance-relevant predecessors and requires disposition plus handoff/artifact inspection."
+    },
+    "existing_route_robustness_safety_suites_non_regressed": {
+      "status": "pass",
+      "evidence": "The 0.6.8 route, robustness, and safety fixtures remain in place and verify.sh retains their checks."
+    }
+  },
+  "runtime_latency_target": {
+    "p50_improvement_target_percent": 20,
+    "p90_target": "no worse",
+    "status": "missing evidence",
+    "p50_observed": null,
+    "p90_observed": null,
+    "token_counts_observed": null,
+    "service_tier_response_metadata": null,
+    "note": "Actual isolated A/B latency, token counts, and service-tier response metadata are missing evidence; the target is not claimed achieved."
+  },
+  "missing_evidence": [
+    "isolated A/B latency and token counts for 0.6.8 versus 0.7.0",
+    "actual service-tier response metadata",
+    "runtime scheduler/enforcement beyond instruction-driven contracts",
+    "independent blind review of output quality"
+  ]
+}

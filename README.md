@@ -1,6 +1,6 @@
 # Sol Advisor
 
-Sol Advisor is a small Codex orchestration skill. After installation it is the
+Sol Advisor 0.7.0 is a small Codex orchestration skill. After installation it is the
 default route for every new user request. Activation does not force a child: simple
 answers, status-only, install-only, and no-subagent requests stay primary-only. Authorized
 commit/push prefers reusing the implementation worker or starting one bounded worker with
@@ -12,6 +12,38 @@ evidence under an exact question or execution after a decision-complete packet. 
 with an unknown runtime path, ownership, or caller flow, start evidence-only reconnaissance: `explorer` for a
 bounded trace; `deep_explorer` for cross-package/cross-repository, competing, legacy-generated, or architecture-sensitive
 paths. The primary frames the question without exhausting the same search; Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known; packet and review overhead can keep known paths primary/worker.
+
+### Coordination guardrails in 0.7.0
+
+At spawn, Sol records an active-child ownership ledger covering the child role/objective, owned evidence/files/tests/review,
+acceptance relevance, explicitly allowed orthogonal primary work, and dependent phases. While a child is nonterminal,
+the primary is limited to that named orthogonal work or a bounded non-overlapping spot-check; it does not duplicate or
+take over the child's evidence search, implementation, tests, browser/runtime QA, or review because the child is slow or
+quiet. The shared worktree remains one-writer.
+
+Before a dependent phase (including review or acceptance validation) or ACCEPT, Sol inspects state and waits for every
+acceptance-relevant predecessor to reach terminal state, then inspects and dispositions its handoff and artifacts.
+`failed`, `blocked`, and authorized interruption require a recorded disposition; missing evidence cannot be silently
+waived and partial output is not accepted. Prefer a long `wait_agent`; `list_agents` is for preflight/state transitions
+or user-requested status, and one factual `send_message` is used only when progress evidence is genuinely needed.
+Silence is not abandonment, and `interrupt_agent` is limited to user stop, safety boundary, or evidence-supported
+abandonment.
+When `wait_agent` yields only a timeout with no new child output, blocker, state transition, or user decision, the primary
+emits no user-facing status/chatter; updates are reserved for a return/evidence, actual transition, blocker, or needed
+decision.
+
+Fresh cited evidence is reusable only when scope, branch/base, dirty ownership, relevant config/runtime, and contracts
+are unchanged; otherwise invalidate/recon. The worker owns tracked tests/config/dependencies, one tester owns browser
+runtime QA end to end, and Sol runs the narrowest local non-browser acceptance subset only after predecessors are
+terminal. Default to at most one reviewer; a second requires a distinct named risk axis and explicit reason. The
+deterministic file-backed fixture is `plugins/sol-advisor/skills/orchestration/evals/coordination_cases.json`, checked
+by a pure state/action evaluator and `scripts/verify-coordination.sh`; reports include
+`reports/output_quality_scorecard.md`, the skills/orchestration-scoped Yao trust report, and the
+machine-checked `reports/plugin_shell_trust.md/.json` inventory for every shipped shell entrypoint.
+Unavailable runtime A/B latency/token and service-tier metadata remain missing evidence.
+
+The interface's `activation.mode: manual` is adapter invocation metadata only; the global AGENTS default supplies
+always-on routing.
 Browser/runtime QA stays with one tester. An exact later user selection (user-selected browser tool)
 always wins, is preflighted on its own, and never falls back. For default or generic “browser plugin”
 QA, probe actual capability rather than infer from OS labels, record the `selected route`, availability,

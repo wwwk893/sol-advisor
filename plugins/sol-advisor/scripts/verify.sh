@@ -1,5 +1,5 @@
 #!/bin/sh
-# Repository-local verification for Sol Advisor 0.6.8.
+# Repository-local verification for Sol Advisor 0.7.0.
 
 set -eu
 
@@ -16,6 +16,7 @@ repo_dir=$(CDPATH= cd "$plugin_dir/../.." && pwd) || exit 1
 installer=$script_dir/install-agents.sh
 runtime_inspector=$script_dir/inspect-agent-runtime.sh
 external_verifier=$script_dir/verify-external-specialist.sh
+coordination_verifier=$script_dir/verify-coordination.sh
 templates=$plugin_dir/agents
 manifest=$plugin_dir/.codex-plugin/plugin.json
 skill=$plugin_dir/skills/orchestration/SKILL.md
@@ -31,13 +32,14 @@ robustness_cases=$plugin_dir/skills/orchestration/evals/robustness_cases.json
 allocation_cases=$plugin_dir/skills/orchestration/evals/allocation_cases.json
 semantic_config=$plugin_dir/skills/orchestration/evals/semantic_config.json
 
-for required in "$installer" "$runtime_inspector" "$external_verifier" "$manifest" "$skill" "$contracts" \
+for required in "$installer" "$runtime_inspector" "$external_verifier" "$coordination_verifier" "$manifest" "$skill" "$contracts" \
   "$native_contract" "$luna_contract" "$ui" "$interface" "$skill_manifest" \
   "$trigger_cases" "$robustness_cases" "$allocation_cases" "$semantic_config"; do
   test -f "$required" || fail "required file missing: $required"
 done
 
 sh "$external_verifier"
+sh "$coordination_verifier"
 
 readme_arg=$readme
 if [ ! -f "$readme" ]; then
@@ -47,11 +49,18 @@ fi
 tmp_base=${TMPDIR:-/tmp}
 case "$tmp_base" in /*) ;; *) tmp_base=/tmp ;; esac
 tmp_dir=''
+snapshot_dir=''
 cleanup() {
   if [ -n "$tmp_dir" ] && [ -d "$tmp_dir" ]; then
     case "$tmp_dir" in
       "$tmp_base"/sol-advisor-verify.*) rm -rf "$tmp_dir" ;;
       *) printf '%s\n' "REFUSING cleanup of unexpected directory: $tmp_dir" >&2 ;;
+    esac
+  fi
+  if [ -n "$snapshot_dir" ] && [ -d "$snapshot_dir" ]; then
+    case "$snapshot_dir" in
+      "$tmp_base"/sol-advisor-snapshot.*) rm -rf "$snapshot_dir" ;;
+      *) printf '%s\n' "REFUSING cleanup of unexpected directory: $snapshot_dir" >&2 ;;
     esac
   fi
 }
@@ -74,8 +83,8 @@ manifest_path, *paths = sys.argv[1:]
 doc_paths = paths[:6]
 interface_path, skill_manifest_path, trigger_cases_path, robustness_cases_path, allocation_cases_path, semantic_config_path = paths[6:]
 manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-if manifest.get("version") != "0.6.8":
-    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.6.8")
+if manifest.get("version") != "0.7.0":
+    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.7.0")
 prompts = manifest.get("interface", {}).get("defaultPrompt")
 if not isinstance(prompts, list) or not prompts or not all(isinstance(p, str) and p.strip() for p in prompts):
     raise SystemExit("manifest defaultPrompt must be a non-empty list of strings")
@@ -99,6 +108,47 @@ docs = {
 skill, contracts, native, luna, readme, ui = [
     docs[Path(path).name if path else "README.md"] for path in doc_paths
 ]
+def frontmatter_top_level_keys(text):
+    match = re.match(r"^---\n(.*?)\n---(?:\n|$)", text, re.DOTALL)
+    if not match:
+        raise ValueError("frontmatter is missing or malformed")
+    keys = set()
+    for line in match.group(1).splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        if indent:
+            continue
+        if ":" not in line:
+            raise ValueError("top-level frontmatter entry has no key separator")
+        key = line.split(":", 1)[0].strip()
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", key):
+            raise ValueError(f"invalid top-level frontmatter key {key!r}")
+        keys.add(key)
+    return keys
+
+try:
+    frontmatter_keys = frontmatter_top_level_keys(skill)
+except ValueError as exc:
+    raise SystemExit(f"SKILL.md frontmatter is invalid: {exc}")
+allowed_frontmatter = {"name", "description", "license", "allowed-tools", "metadata"}
+unsupported_frontmatter = frontmatter_keys - allowed_frontmatter
+if unsupported_frontmatter:
+    raise SystemExit(
+        "SKILL.md frontmatter has unsupported keys: "
+        + ", ".join(sorted(unsupported_frontmatter))
+    )
+try:
+    legal_nested = frontmatter_top_level_keys(
+        "---\nname: orchestration\ndescription: test\nmetadata:\n  version: 0.7.0\n---\n"
+    )
+    illegal_top_level = frontmatter_top_level_keys(
+        "---\nname: orchestration\ndescription: test\nversion: 0.7.0\n---\n"
+    )
+except ValueError as exc:
+    raise SystemExit(f"frontmatter guard self-test failed: {exc}")
+if "version" in legal_nested or "version" not in illegal_top_level:
+    raise SystemExit("frontmatter guard nested-metadata self-test failed")
 interface_text = Path(interface_path).read_text(encoding="utf-8")
 skill_manifest = json.loads(Path(skill_manifest_path).read_text(encoding="utf-8"))
 trigger_cases = json.loads(Path(trigger_cases_path).read_text(encoding="utf-8"))
@@ -451,19 +501,19 @@ for key, value in (
 if "openai:" not in interface_text or "Native V2" not in interface_text:
     raise SystemExit("interface.yaml missing native V2 openai degradation")
 for key, expected in (
-    ("version", "0.6.8"),
+    ("version", "0.7.0"),
     ("owner", "wwwk893"),
-    ("updated_at", "2026-08-28"),
-    ("lifecycle_stage", "production"),
+    ("updated_at", "2026-09-01"),
+    ("lifecycle_stage", "governed"),
     ("context_budget_tier", "production"),
-    ("review_cadence", "runtime/routing changes"),
+    ("review_cadence", "monthly"),
 ):
     if skill_manifest.get(key) != expected:
         raise SystemExit(f"skill manifest {key} does not equal {expected!r}")
 if skill_manifest.get("target_platforms") != ["openai-codex"]:
     raise SystemExit("skill manifest target_platforms must be openai-codex")
-if skill_manifest.get("factory_components") != ["references", "evals"]:
-    raise SystemExit("skill manifest factory_components must list references and evals only")
+if skill_manifest.get("factory_components") != ["references", "evals", "reports", "scripts"]:
+    raise SystemExit("skill manifest factory_components must list references, evals, reports, and scripts")
 for key in ("input_contract", "output_contract", "rollback_boundary"):
     if not isinstance(skill_manifest.get(key), str) or not skill_manifest[key].strip():
         raise SystemExit(f"skill manifest missing {key}")
@@ -743,7 +793,7 @@ print(
     f"{len(robustness_cases['should_not_trigger'])} opt-out)"
 )
 PY
-pass "0.6.8 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
+pass "0.7.0 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -1017,4 +1067,12 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$null_id" >/dev/n
 fi
 pass "runtime inspector rejects null sandbox, permission, and cwd metadata"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor 0.6.8 native Luna V2 checks completed in $tmp_dir"
+if [ "${SOL_ADVISOR_SKIP_SNAPSHOT_TEST-0}" != 1 ]; then
+  snapshot_dir=$(mktemp -d "$tmp_base/sol-advisor-snapshot.XXXXXX") || fail "could not create installed snapshot directory"
+  cp -R "$plugin_dir" "$snapshot_dir/sol-advisor" || fail "could not copy plugin-only installed snapshot"
+  SOL_ADVISOR_SKIP_SNAPSHOT_TEST=1 sh "$snapshot_dir/sol-advisor/scripts/verify.sh" >/dev/null \
+    || fail "plugin-only installed snapshot verifier failed"
+  pass "plugin-only installed snapshot verifier (README optional)"
+fi
+
+printf '%s\n' "VERIFY PASSED: Sol Advisor 0.7.0 native Luna V2 and coordination checks completed in $tmp_dir"

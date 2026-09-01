@@ -1,0 +1,64 @@
+{
+  "schema_version": "0.7.0-plugin-shell-trust-v1",
+  "release": "0.7.0",
+  "scope": "plugins/sol-advisor/scripts/*.sh",
+  "generated_for": "source-contract-without-generated-reports",
+  "checks": {
+    "exact_inventory": true,
+    "hashes": "pass",
+    "sh_n": "pass",
+    "network_capability_scan": "pass",
+    "side_effect_classification": "pass"
+  },
+  "scripts": [
+    {
+      "path": "scripts/install-agents.sh",
+      "sha256": "b15a3e1b3189107b8143577d2e389448d57cd08eb603a544f8616610fc35196a",
+      "syntax": "pass",
+      "network_capabilities": [],
+      "file_write_classification": "installer mutation is limited to the explicit compatibility-agent target directory and its allowlisted agent files; it does not mutate global config or external services",
+      "side_effect_classification": "filesystem mutation is limited to the explicit installer target; refusal paths are non-mutating",
+      "installer_mutation_boundary": "The installer may create or replace only the explicit compatibility-agent target directory's allowlisted Terra/Sol files; it must not mutate global config, the plugin cache, Git, or external services."
+    },
+    {
+      "path": "scripts/verify.sh",
+      "sha256": "28628c57cbbe8697fd64d8f465a4f6b1c328d255ef77a64f79e77f91b8c89f82",
+      "syntax": "pass",
+      "network_capabilities": [],
+      "file_write_classification": "read-only package checks plus disposable temporary files cleaned inside the guarded temp boundary",
+      "side_effect_classification": "reads package files and invokes local checks; temporary snapshot/test data is cleaned under validated prefixes",
+      "installer_mutation_boundary": "not applicable: verifier is not an installer"
+    },
+    {
+      "path": "scripts/verify-coordination.sh",
+      "sha256": "aa166a7bc9ba6da7d2cc6c9bf2a68400b997af320e14b519ce3b9b87a092b574",
+      "syntax": "pass",
+      "network_capabilities": [],
+      "file_write_classification": "read-only package checks plus disposable temporary files only if future checks declare a guarded boundary",
+      "side_effect_classification": "reads local fixture, reports, and contracts; evaluator subprocess has no external or package writes",
+      "installer_mutation_boundary": "not applicable: coordination verifier is not an installer"
+    },
+    {
+      "path": "scripts/verify-external-specialist.sh",
+      "sha256": "6152649f10a4d6ee48092ab7a67c68419799e08a0ab2a7beec1fca23391f2fc4",
+      "syntax": "pass",
+      "network_capabilities": [],
+      "file_write_classification": "read-only package checks; no product or external-service writes",
+      "side_effect_classification": "reads local contracts and fixtures and runs local Python checks only",
+      "installer_mutation_boundary": "not applicable: external-specialist verifier is not an installer"
+    },
+    {
+      "path": "scripts/inspect-agent-runtime.sh",
+      "sha256": "ed97bad2f43ee1e7bc4e4c5e9a6d1d1b8cb5d17dc4318727886afe88cd4c4eb4",
+      "syntax": "pass",
+      "network_capabilities": [],
+      "file_write_classification": "read-only allowlisted rollout inspection plus one guarded temporary match list",
+      "side_effect_classification": "reads one exact local rollout and removes only its validated temporary match list",
+      "installer_mutation_boundary": "not applicable: runtime inspector is not an installer"
+    }
+  ],
+  "warnings": [
+    "This is static source evidence; it does not claim runtime enforcement or external approval.",
+    "Network scan covers the listed shell capability patterns; future script edits require regenerated hashes and review."
+  ]
+}

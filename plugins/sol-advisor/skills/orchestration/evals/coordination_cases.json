@@ -1,0 +1,661 @@
+{
+  "schema_version": "0.7.0-coordination-v1",
+  "suite": "Sol Advisor 0.7.0 coordination state transitions",
+  "fixture_type": "file-backed fixture",
+  "sanitized": true,
+  "native_route": {
+    "roles": ["deep_explorer", "explorer", "worker", "tester", "reviewer"],
+    "model": "gpt-5.6-luna",
+    "reasoning_effort": "max",
+    "fork_turns": "none",
+    "priority_missing_semantics": "unobservable"
+  },
+  "semantic_holdouts": {
+    "strict_micro_edit_predicate": {
+      "one_repository": true,
+      "one_already_inspected_owned_file": true,
+      "genuinely_atomic_settled_change": true,
+      "no_active_writer_overlap_or_unclear_dirty_ownership": true,
+      "at_most_one_narrow_local_non_browser_check": true,
+      "packet_review_overhead_exceeds_saved_context": true
+    }
+  },
+  "cases": [
+    {
+      "id": "allowed_orthogonal_primary_prep",
+      "scenario": "An active worker owns implementation and tests while Sol prepares an explicitly separate release note.",
+      "state": {"primary_orthogonal_scopes": ["docs/release-notes.md"], "children": [{"id": "worker-1", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": true, "scope": ["src/service.py", "tests/test_service.py"]}]},
+      "action": {"actor": "primary", "kind": "prep", "scope": ["docs/release-notes.md"]},
+      "expected": {"decision": "allow", "reason_code": "orthogonal_primary_work", "terminal_barrier": false},
+      "expected_outcome": "Allow explicitly allowed orthogonal primary prep; the active worker keeps implementation and test ownership."
+    },
+    {
+      "id": "forbidden_same_scope_explorer_duplication",
+      "scenario": "An explorer is active on the caller trace and Sol starts the same evidence search.",
+      "state": {"children": [{"id": "explorer-1", "role": "explorer", "status": "active", "acceptance_relevant": true, "scope": ["api/routes.py callers", "evidence/call-trace"]}]},
+      "action": {"actor": "primary", "kind": "evidence_search", "scope": ["api/routes.py callers"]},
+      "expected": {"decision": "deny", "reason_code": "orthogonal_scope_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Deny same-scope primary explorer duplication; wait for or correct the existing explorer instead."
+    },
+    {
+      "id": "forbidden_primary_edit_tests_while_worker_active",
+      "scenario": "A worker owns tracked implementation and tests while Sol attempts to edit and run those tests.",
+      "state": {"children": [{"id": "worker-2", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": true, "scope": ["src/cache.py", "tests/test_cache.py"]}]},
+      "action": {"actor": "primary", "kind": "edit_and_test", "scope": ["src/cache.py", "tests/test_cache.py"]},
+      "expected": {"decision": "deny", "reason_code": "orthogonal_scope_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Deny primary edits and same-scope tests while worker is active; worker owns tracked tests/config/dependencies."
+    },
+    {
+      "id": "forbidden_primary_browser_qa_while_tester_active",
+      "scenario": "A tester owns the browser session while Sol attempts a second browser QA session.",
+      "state": {"children": [{"id": "tester-1", "role": "tester", "status": "active", "writer": false, "acceptance_relevant": true, "scope": ["browser/runtime QA", "test-session"]}]},
+      "action": {"actor": "primary", "kind": "browser_qa", "scope": ["browser/runtime QA", "test-session"]},
+      "expected": {"decision": "deny", "reason_code": "orthogonal_scope_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Deny primary browser QA while tester is active; the same tester owns browser/runtime QA end to end."
+    },
+    {
+      "id": "dependent_reviewer_waits_for_worker_terminal",
+      "scenario": "A reviewer phase depends on a worker that is still active.",
+      "state": {"children": [{"id": "worker-3", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": true, "scope": ["src/auth.py", "tests/test_auth.py"]}]},
+      "action": {"actor": "primary", "kind": "start_dependent_review", "scope": ["review"]},
+      "expected": {"decision": "wait", "reason_code": "predecessor_nonterminal", "terminal_barrier": true},
+      "expected_outcome": "Wait for the acceptance-relevant worker to reach terminal state and inspect its handoff before dependent reviewer work."
+    },
+    {
+      "id": "acceptance_waits_for_all_relevant_children",
+      "scenario": "The worker is terminal but the acceptance-relevant tester remains active when Sol attempts acceptance.",
+      "state": {"children": [{"id": "worker-4", "role": "worker", "status": "succeeded", "writer": true, "acceptance_relevant": true, "scope": ["src/player.py", "tests/test_player.py"], "handoff_inspected": true, "artifacts_inspected": true, "evidence_complete": true}, {"id": "tester-2", "role": "tester", "status": "active", "writer": false, "acceptance_relevant": true, "scope": ["browser/runtime QA"]}, {"id": "explorer-2", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["docs"]}]},
+      "action": {"actor": "primary", "kind": "accept", "scope": ["candidate"]},
+      "expected": {"decision": "wait", "reason_code": "acceptance_predecessor_nonterminal", "terminal_barrier": true},
+      "expected_outcome": "Wait for every acceptance-relevant child, including the active tester, before accepting; unrelated terminal evidence does not waive the barrier."
+    },
+    {
+      "id": "failed_child_requires_terminal_disposition",
+      "scenario": "A failed acceptance-relevant worker has no Sol disposition and acceptance is requested.",
+      "state": {"children": [{"id": "worker-5", "role": "worker", "status": "failed", "writer": true, "acceptance_relevant": true, "scope": ["src/index.py"], "disposition": null}]},
+      "action": {"actor": "primary", "kind": "accept", "scope": ["candidate"]},
+      "expected": {"decision": "wait", "reason_code": "terminal_disposition_required", "terminal_barrier": true},
+      "expected_outcome": "Record and resolve failed-child disposition before treating it as terminal; missing evidence cannot be silently waived."
+    },
+    {
+      "id": "blocked_child_requires_terminal_disposition",
+      "scenario": "A blocked acceptance-relevant tester has no Sol disposition and dependent validation is requested.",
+      "state": {"children": [{"id": "tester-3", "role": "tester", "status": "blocked", "writer": false, "acceptance_relevant": true, "scope": ["browser/runtime QA"], "disposition": null}]},
+      "action": {"actor": "primary", "kind": "start_dependent_validation", "scope": ["acceptance"]},
+      "expected": {"decision": "wait", "reason_code": "terminal_disposition_required", "terminal_barrier": true},
+      "expected_outcome": "Record and resolve blocked tester disposition before dependent validation; do not accept partial or missing browser evidence."
+    },
+    {
+      "id": "silence_is_not_abandonment",
+      "scenario": "An active child is quiet and stale, but no safety or evidence-supported abandonment exists.",
+      "state": {"children": [{"id": "explorer-3", "role": "explorer", "status": "active", "acceptance_relevant": true, "scope": ["bounded trace"], "last_update": "stale"}]},
+      "action": {"actor": "primary", "kind": "wait", "scope": ["bounded trace"], "wait_event": "silence"},
+      "expected": {"decision": "wait", "reason_code": "silence_not_abandonment", "terminal_barrier": false},
+      "expected_outcome": "Silence and elapsed time alone are not abandonment; prefer a long wait_agent and do not interrupt or duplicate the child."
+    },
+    {
+      "id": "wait_silence_no_chatter",
+      "scenario": "wait_agent yields only a timeout with no new child output, blocker, state transition, or user decision.",
+      "state": {"children": [{"id": "worker-6", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": true, "scope": ["src/report.py"]}]},
+      "action": {"actor": "primary", "kind": "wait", "scope": ["worker-6"], "wait_event": "timeout_no_new_output"},
+      "expected": {"decision": "wait", "reason_code": "quiet_wait_no_chatter", "terminal_barrier": false},
+      "expected_outcome": "Keep the internal wait silent: emit no user-facing status/chatter without new output, blocker, state transition, or needed user decision."
+    },
+    {
+      "id": "wait_new_child_return_update",
+      "scenario": "wait_agent returns new child evidence.",
+      "state": {"children": [{"id": "worker-7", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": true, "scope": ["src/report.py"]}]},
+      "action": {"actor": "primary", "kind": "wait", "scope": ["worker-7"], "wait_event": "new_return"},
+      "expected": {"decision": "update", "reason_code": "new_wait_evidence", "terminal_barrier": false},
+      "expected_outcome": "A new child return is a factual update permitted after a quiet wait."
+    },
+    {
+      "id": "wait_state_transition_update",
+      "scenario": "A child transitions state while Sol waits.",
+      "state": {"children": [{"id": "worker-8", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": true, "scope": ["src/report.py"]}]},
+      "action": {"actor": "primary", "kind": "wait", "scope": ["worker-8"], "wait_event": "state_transition"},
+      "expected": {"decision": "update", "reason_code": "new_wait_evidence", "terminal_barrier": false},
+      "expected_outcome": "An actual child state transition permits a concise user-facing update."
+    },
+    {
+      "id": "wait_blocker_update",
+      "scenario": "A child reports an explicit blocker while Sol waits.",
+      "state": {"children": [{"id": "worker-9", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": true, "scope": ["src/report.py"]}]},
+      "action": {"actor": "primary", "kind": "wait", "scope": ["worker-9"], "wait_event": "blocker"},
+      "expected": {"decision": "update", "reason_code": "new_wait_evidence", "terminal_barrier": false},
+      "expected_outcome": "An explicit blocker permits a concise factual update and a return to Sol for disposition."
+    },
+    {
+      "id": "wait_user_decision_update",
+      "scenario": "A user decision arrives while Sol waits.",
+      "state": {"children": [{"id": "worker-10", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": true, "scope": ["src/report.py"]}]},
+      "action": {"actor": "primary", "kind": "wait", "scope": ["worker-10"], "wait_event": "user_decision"},
+      "expected": {"decision": "update", "reason_code": "new_wait_evidence", "terminal_barrier": false},
+      "expected_outcome": "A needed user decision permits a concise user-facing update after waiting."
+    },
+    {
+      "id": "cross_role_scope_overlap_denied",
+      "scenario": "A second native role attempts evidence work inside an active worker's owned scope.",
+      "state": {"children": [{"id": "worker-11", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/shared.py"]}, {"id": "explorer-11", "role": "explorer", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["src/shared.py"]}]},
+      "action": {"actor": "explorer", "actor_child_id": "explorer-11", "kind": "evidence_search", "scope": ["src/shared.py"]},
+      "expected": {"decision": "deny", "reason_code": "active_child_scope_overlap", "terminal_barrier": false},
+      "expected_outcome": "Deny cross-role overlap; the active child's scope lock applies to primary and other native child actors."
+    },
+    {
+      "id": "cross_role_scope_nonoverlap_allowed",
+      "scenario": "A bounded explorer question is disjoint from an active worker's owned files.",
+      "state": {"children": [{"id": "worker-12", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/shared.py"]}, {"id": "explorer-12", "role": "explorer", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["docs/api.md"]}]},
+      "action": {"actor": "explorer", "actor_child_id": "explorer-12", "kind": "evidence_search", "scope": ["docs/api.md"]},
+      "expected": {"decision": "allow", "reason_code": "own_child_continuation", "terminal_barrier": false},
+      "expected_outcome": "Allow explicitly non-overlapping cross-role evidence scope while preserving one-writer ownership."
+    },
+    {
+      "id": "two_writer_disjoint_scopes_denied",
+      "scenario": "A tester writer starts a disjoint write while an active worker already owns the shared worktree.",
+      "state": {"children": [{"id": "worker-13", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/one.py"]}, {"id": "tester-13", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/two.py"], "repair_authorization": {"issued_by": "sol", "scope": ["src/two.py"], "failed_check_id": "check-13", "round": 1, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-13", "kind": "repair_product", "scope": ["src/two.py"], "round": 1},
+      "expected": {"decision": "deny", "reason_code": "shared_worktree_writer_collision", "terminal_barrier": false},
+      "expected_outcome": "Deny a second writer even on a disjoint scope; shared-worktree one-writer ownership is global."
+    },
+    {
+      "id": "terminal_ready_dependent_review_allow",
+      "scenario": "The worker succeeded and Sol inspected its handoff and artifacts before review.",
+      "state": {"children": [{"id": "worker-14", "role": "worker", "status": "succeeded", "writer": true, "acceptance_relevant": true, "scope": ["src/ready.py"], "handoff_inspected": true, "artifacts_inspected": true, "evidence_complete": true, "required_evidence": ["tests", "handoff"], "evidence_present": ["tests", "handoff"], "disposition": {"recorded_by": "sol", "decision": "accepted-for-review"}}]},
+      "action": {"actor": "primary", "kind": "start_dependent_review", "scope": ["review"]},
+      "expected": {"decision": "allow", "reason_code": "predecessors_terminal", "terminal_barrier": true},
+      "expected_outcome": "After terminal handoff and artifact inspection, allow the dependent reviewer phase."
+    },
+    {
+      "id": "handoff_artifact_missing_wait",
+      "scenario": "The worker reports success but Sol has not inspected a required artifact before dependent validation.",
+      "state": {"children": [{"id": "worker-15", "role": "worker", "status": "succeeded", "writer": true, "acceptance_relevant": true, "scope": ["src/missing.py"], "handoff_inspected": true, "artifacts_inspected": false, "evidence_complete": false}]},
+      "action": {"actor": "primary", "kind": "start_dependent_validation", "scope": ["acceptance"]},
+      "expected": {"decision": "wait", "reason_code": "handoff_artifacts_missing", "terminal_barrier": true},
+      "expected_outcome": "Wait for handoff and artifact inspection; successful status alone cannot waive required evidence."
+    },
+    {
+      "id": "terminal_ready_accept_allow",
+      "scenario": "Every acceptance-relevant child succeeded and Sol inspected each handoff and artifact before ACCEPT.",
+      "state": {"children": [{"id": "worker-16", "role": "worker", "status": "succeeded", "writer": true, "acceptance_relevant": true, "scope": ["src/accept.py"], "handoff_inspected": true, "artifacts_inspected": true, "evidence_complete": true, "required_evidence": ["tests", "handoff"], "evidence_present": ["tests", "handoff"], "disposition": {"recorded_by": "sol", "decision": "accepted-for-acceptance"}}, {"id": "tester-16", "role": "tester", "status": "succeeded", "writer": false, "acceptance_relevant": true, "scope": ["browser/runtime QA"], "handoff_inspected": true, "artifacts_inspected": true, "evidence_complete": true, "required_evidence": ["browser", "handoff"], "evidence_present": ["browser", "handoff"], "disposition": {"recorded_by": "sol", "decision": "accepted-for-acceptance"}}]},
+      "action": {"actor": "primary", "kind": "accept", "scope": ["candidate"]},
+      "expected": {"decision": "allow", "reason_code": "predecessors_terminal", "terminal_barrier": true},
+      "expected_outcome": "Allow ACCEPT only after all acceptance-relevant predecessors are terminal and their handoffs and artifacts are inspected."
+    },
+    {
+      "id": "interrupted_child_requires_terminal_disposition",
+      "scenario": "An authorized interruption is terminal only after Sol records its disposition; ACCEPT arrives before that record.",
+      "state": {"children": [{"id": "worker-17", "role": "worker", "status": "interrupted", "writer": true, "acceptance_relevant": true, "scope": ["src/interrupted.py"], "disposition": null}]},
+      "action": {"actor": "primary", "kind": "accept", "scope": ["candidate"]},
+      "expected": {"decision": "wait", "reason_code": "terminal_disposition_required", "terminal_barrier": true},
+      "expected_outcome": "Wait for disposition of an interrupted predecessor; an authorized interruption does not silently waive required evidence."
+    },
+    {
+      "id": "forbidden_primary_recon_while_explorer_active",
+      "scenario": "An active explorer owns a bounded reconnaissance trace while Sol attempts the same recon.",
+      "state": {"children": [{"id": "explorer-18", "role": "explorer", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["api/recon"]}]},
+      "action": {"actor": "primary", "kind": "recon", "scope": ["api/recon"]},
+      "expected": {"decision": "deny", "reason_code": "orthogonal_scope_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Deny primary recon inside an active explorer's owned evidence scope."
+    },
+    {
+      "id": "forbidden_primary_recon_while_deep_explorer_active",
+      "scenario": "A deep explorer owns an architecture-sensitive trace while Sol attempts the same recon.",
+      "state": {"children": [{"id": "deep-19", "role": "deep_explorer", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["packages/architecture"]}]},
+      "action": {"actor": "primary", "kind": "recon", "scope": ["packages/architecture"]},
+      "expected": {"decision": "deny", "reason_code": "orthogonal_scope_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Deny primary recon inside an active deep_explorer's architecture-sensitive evidence scope."
+    },
+    {
+      "id": "forbidden_primary_review_while_reviewer_active",
+      "scenario": "A reviewer owns a review scope while Sol attempts to take over that review.",
+      "state": {"children": [{"id": "reviewer-20", "role": "reviewer", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["review/risk"]}]},
+      "action": {"actor": "primary", "kind": "review", "scope": ["review/risk"]},
+      "expected": {"decision": "deny", "reason_code": "orthogonal_scope_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Deny primary review takeover while the assigned reviewer is active."
+    },
+    {
+      "id": "authorized_interrupt_allowed",
+      "scenario": "Sol has explicit evidence-supported abandonment and interrupts the active child.",
+      "state": {"children": [{"id": "explorer-6", "role": "explorer", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["old trace"]}]},
+      "action": {"actor": "primary", "kind": "interrupt", "scope": ["old trace"], "interrupt_reason": "evidence_supported_abandonment"},
+      "expected": {"decision": "allow", "reason_code": "interrupt_authorized", "terminal_barrier": false},
+      "expected_outcome": "Allow interrupt only for user stop, safety boundary, or evidence-supported abandonment."
+    },
+    {
+      "id": "unauthorized_interrupt_denied",
+      "scenario": "Sol wants to interrupt because a child is quiet, without user stop, safety, or abandonment evidence.",
+      "state": {"children": [{"id": "explorer-7", "role": "explorer", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["quiet trace"], "last_update": "stale"}]},
+      "action": {"actor": "primary", "kind": "interrupt", "scope": ["quiet trace"], "interrupt_reason": "elapsed_time_only"},
+      "expected": {"decision": "deny", "reason_code": "interrupt_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Deny elapsed-time-only interruption; silence is not abandonment."
+    },
+    {
+      "id": "fresh_evidence_reuse",
+      "scenario": "A cited explorer handoff is fresh across all reuse dimensions.",
+      "state": {"children": [{"id": "explorer-8", "role": "explorer", "status": "succeeded", "acceptance_relevant": true, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-8-handoff", "child_id": "explorer-8", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-8", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-8-handoff", "child_id": "explorer-8", "role": "explorer", "artifact_digest": "digest-explorer-8"}}},
+      "expected": {"decision": "reuse", "reason_code": "evidence_fresh", "terminal_barrier": false},
+      "expected_outcome": "Reuse cited evidence because scope, branch/base, dirty ownership, relevant config/runtime, contracts, and path are unchanged."
+    },
+    {
+      "id": "drifted_evidence_invalidated",
+      "scenario": "A cited explorer handoff is followed by branch/base, ownership, runtime, and contract drift.",
+      "state": {"children": [{"id": "explorer-9", "role": "explorer", "status": "succeeded", "acceptance_relevant": true, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "feature/drift", "base": "different-base", "dirty_ownership": "changed", "config_runtime": "changed", "contracts": "contradiction", "contradiction": true, "path_known": true}, "handoffs": [{"id": "explorer-9-handoff", "child_id": "explorer-9", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-9", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-9-handoff", "child_id": "explorer-9", "role": "explorer", "artifact_digest": "digest-explorer-9"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false},
+      "expected_outcome": "Invalidate and recon or correct the same child when scope, branch/base, ownership, config/runtime, contracts, contradiction, or path changes."
+    },
+    {
+      "id": "unknown_path_evidence_invalidated",
+      "scenario": "The cited evidence does not establish the needed runtime path.",
+      "state": {"children": [{"id": "explorer-10", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": false}, "handoffs": [{"id": "explorer-10-handoff", "child_id": "explorer-10", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-10", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": false}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": false, "provenance": {"handoff_id": "explorer-10-handoff", "child_id": "explorer-10", "role": "explorer", "artifact_digest": "digest-explorer-10"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_drift", "terminal_barrier": false},
+      "expected_outcome": "Do not reuse evidence while the needed path remains unknown; invalidate and run bounded RECON."
+    },
+    {
+      "id": "failed_child_with_disposition_still_blocks",
+      "scenario": "A failed acceptance-relevant worker has a structured Sol disposition, but its missing outcome still cannot be accepted.",
+      "state": {"children": [{"id": "worker-21", "role": "worker", "status": "failed", "writer": true, "acceptance_relevant": true, "scope": ["src/failed.py"], "handoff_inspected": true, "artifacts_inspected": true, "evidence_complete": true, "disposition": {"recorded_by": "sol", "decision": "retain-failure"}}]},
+      "action": {"actor": "primary", "kind": "accept", "scope": ["candidate"]},
+      "expected": {"decision": "deny", "reason_code": "required_evidence_unresolved", "terminal_barrier": true},
+      "expected_outcome": "A disposition is inspectable control evidence but does not silently waive an acceptance-relevant failed predecessor."
+    },
+    {
+      "id": "successful_evidence_incomplete_wait",
+      "scenario": "A successful worker has an inspected handoff and artifact but has not completed declared evidence.",
+      "state": {"children": [{"id": "worker-22", "role": "worker", "status": "succeeded", "writer": true, "acceptance_relevant": true, "scope": ["src/incomplete.py"], "handoff_inspected": true, "artifacts_inspected": true, "evidence_complete": false, "required_evidence": ["tests"], "evidence_present": []}]},
+      "action": {"actor": "primary", "kind": "accept", "scope": ["candidate"]},
+      "expected": {"decision": "wait", "reason_code": "required_evidence_unresolved", "terminal_barrier": true},
+      "expected_outcome": "Wait for explicit evidence_complete and all declared required_evidence before acceptance."
+    },
+    {
+      "id": "all_evidence_complete_allows_accept",
+      "scenario": "Every acceptance-relevant predecessor is terminal, inspected, and complete with its declared evidence.",
+      "state": {"children": [{"id": "worker-23", "role": "worker", "status": "succeeded", "writer": true, "acceptance_relevant": true, "scope": ["src/complete.py"], "handoff_inspected": true, "artifacts_inspected": true, "evidence_complete": true, "required_evidence": ["tests", "handoff"], "evidence_present": ["tests", "handoff"]}, {"id": "tester-23", "role": "tester", "status": "succeeded", "writer": false, "acceptance_relevant": true, "scope": ["browser/runtime QA"], "handoff_inspected": true, "artifacts_inspected": true, "evidence_complete": true, "required_evidence": ["browser", "handoff"], "evidence_present": ["browser", "handoff"]}]},
+      "action": {"actor": "primary", "kind": "accept", "scope": ["candidate"]},
+      "expected": {"decision": "allow", "reason_code": "predecessors_terminal", "terminal_barrier": true},
+      "expected_outcome": "Allow acceptance only when every relevant predecessor's handoff, artifacts, and declared evidence are inspected and complete."
+    },
+    {
+      "id": "explicit_nonrelevant_rescope_inspectable",
+      "scenario": "Sol explicitly rescopes a failed child out of acceptance after inspecting its structured disposition and artifacts.",
+      "state": {"children": [{"id": "worker-24", "role": "worker", "status": "failed", "writer": true, "acceptance_relevant": false, "rescope": true, "scope": ["src/rescoped.py"], "handoff_inspected": true, "artifacts_inspected": true, "evidence_complete": true, "required_evidence": ["handoff"], "evidence_present": ["handoff"], "disposition": {"recorded_by": "sol", "decision": "rescope-out-of-acceptance"}}]},
+      "action": {"actor": "primary", "kind": "accept", "scope": ["candidate"]},
+      "expected": {"decision": "allow", "reason_code": "predecessors_terminal", "terminal_barrier": true},
+      "expected_outcome": "A non-relevant rescope is allowed only with inspectable structured disposition and complete handoff evidence."
+    },
+    {
+      "id": "orthogonal_extra_scope_denied",
+      "scenario": "Sol's preparation includes one allowed documentation item and one undeclared implementation item.",
+      "state": {"primary_orthogonal_scopes": ["docs/release-notes.md"], "children": [{"id": "worker-25", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/service.py"]}]},
+      "action": {"actor": "primary", "kind": "prep", "scope": ["docs/release-notes.md", "src/service.py"]},
+      "expected": {"decision": "deny", "reason_code": "orthogonal_scope_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Directional coverage rejects an orthogonal request containing any undeclared scope item."
+    },
+    {
+      "id": "evidence_extra_scope_invalidated",
+      "scenario": "A cited evidence snapshot covers one API contract but the requested reuse adds an unproven extra scope item.",
+      "state": {"children": [{"id": "explorer-26", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-26-handoff", "child_id": "explorer-26", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-26", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract", "api extra"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-26-handoff", "child_id": "explorer-26", "role": "explorer", "artifact_digest": "digest-explorer-26"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_drift", "terminal_barrier": false},
+      "expected_outcome": "Evidence reuse requires the cited snapshot scope to directionally cover every requested scope item."
+    },
+    {
+      "id": "evidence_missing_provenance_invalidated",
+      "scenario": "A matching evidence snapshot has no inspectable handoff identifier.",
+      "state": {"children": [{"id": "explorer-27", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_provenance_missing", "terminal_barrier": false},
+      "expected_outcome": "Do not reuse a snapshot without explicit nonempty inspectable provenance."
+    },
+    {
+      "id": "same_child_continuation_allow",
+      "scenario": "The assigned worker continues its own active write within its fully covered scope.",
+      "state": {"children": [{"id": "worker-28", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/owned.py"]}]},
+      "action": {"actor": "worker", "actor_child_id": "worker-28", "kind": "write", "scope": ["src/owned.py"]},
+      "expected": {"decision": "allow", "reason_code": "own_child_continuation", "terminal_barrier": false},
+      "expected_outcome": "The assigned child may continue its own owned action; its own record is excluded from overlap and writer self-conflict checks."
+    },
+    {
+      "id": "other_child_overlap_denied",
+      "scenario": "A worker child attempts work inside another active worker child's assignment.",
+      "state": {"children": [{"id": "worker-29", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/shared.py"]}, {"id": "worker-30", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/shared.py", "src/other.py"]}]},
+      "action": {"actor": "worker", "actor_child_id": "worker-30", "kind": "write", "scope": ["src/shared.py"]},
+      "expected": {"decision": "deny", "reason_code": "active_child_scope_overlap", "terminal_barrier": false},
+      "expected_outcome": "A different child cannot overlap an active child's assignment even when it has a valid native role."
+    },
+    {
+      "id": "read_only_tester_nonwriter",
+      "scenario": "A read-only tester is active while Sol prepares an explicitly disjoint documentation note.",
+      "state": {"primary_orthogonal_scopes": ["docs/release-notes.md"], "children": [{"id": "tester-31", "role": "tester", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["browser/runtime QA"]}]},
+      "action": {"actor": "primary", "kind": "prep", "scope": ["docs/release-notes.md"]},
+      "expected": {"decision": "allow", "reason_code": "orthogonal_primary_work", "terminal_barrier": false},
+      "expected_outcome": "A read-only tester does not falsely become a shared-worktree writer and does not block disjoint authorized preparation."
+    },
+    {
+      "id": "tester_repair_writer_collision",
+      "scenario": "A tester explicitly authorized to repair files attempts a disjoint write while the worker owns the shared worktree.",
+      "state": {"children": [{"id": "worker-32", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/one.py"]}, {"id": "tester-32", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/two.py"], "repair_authorization": {"issued_by": "sol", "scope": ["src/two.py"], "failed_check_id": "check-32", "round": 2, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-32", "kind": "repair_product", "scope": ["src/two.py"], "round": 2},
+      "expected": {"decision": "deny", "reason_code": "shared_worktree_writer_collision", "terminal_barrier": false},
+      "expected_outcome": "Explicit tester writer ownership collides with another writer globally, even on disjoint files."
+    },
+    {
+      "id": "actor_scope_escape_denied",
+      "scenario": "A worker proposes a write outside the scope assigned to its child identity.",
+      "state": {"children": [{"id": "worker-33", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/one.py"]}]},
+      "action": {"actor": "worker", "actor_child_id": "worker-33", "kind": "write", "scope": ["src/two.py"]},
+      "expected": {"decision": "deny", "reason_code": "actor_scope_escape", "terminal_barrier": false},
+      "expected_outcome": "A child identity must directionally cover its requested scope; an unrelated file is an escape."
+    },
+    {
+      "id": "nonprimary_accept_denied",
+      "scenario": "A reviewer supplies valid-looking state but attempts to control ACCEPT.",
+      "state": {"children": [{"id": "reviewer-34", "role": "reviewer", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["review"]}]},
+      "action": {"actor": "reviewer", "actor_child_id": "reviewer-34", "kind": "accept", "scope": ["candidate"]},
+      "expected": {"decision": "deny", "reason_code": "primary_only_action", "terminal_barrier": false},
+      "expected_outcome": "Only Sol primary may authorize ACCEPT; a reviewer cannot take over primary control."
+    },
+    {
+      "id": "nonprimary_interrupt_denied",
+      "scenario": "A tester has a valid user-stop reason but attempts to interrupt another child.",
+      "state": {"children": [{"id": "tester-35", "role": "tester", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["browser/runtime QA"]}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-35", "kind": "interrupt", "scope": ["browser/runtime QA"], "interrupt_reason": "user_stop"},
+      "expected": {"decision": "deny", "reason_code": "primary_only_action", "terminal_barrier": false},
+      "expected_outcome": "Only Sol primary may interrupt children; a valid reason does not grant a child control authority."
+    },
+    {
+      "id": "primary_unlisted_disjoint_write_denied",
+      "scenario": "An explorer is active while Sol proposes a disjoint write that is absent from the primary ownership ledger.",
+      "state": {"children": [{"id": "explorer-36", "role": "explorer", "status": "active", "acceptance_relevant": false, "scope": ["docs/existing.md"]}]},
+      "action": {"actor": "primary", "kind": "write", "scope": ["src/unlisted.py"]},
+      "expected": {"decision": "deny", "reason_code": "orthogonal_scope_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Deny every substantive primary action not fully covered by an explicit orthogonal ledger entry while a child is active."
+    },
+    {
+      "id": "assigned_reviewer_write_denied",
+      "scenario": "An assigned reviewer attempts to edit the review file in its own review scope.",
+      "state": {"children": [{"id": "reviewer-37", "role": "reviewer", "status": "active", "writer": false, "acceptance_relevant": false, "scope": ["review/risk"]}]},
+      "action": {"actor": "reviewer", "actor_child_id": "reviewer-37", "kind": "write", "scope": ["review/risk"]},
+      "expected": {"decision": "deny", "reason_code": "role_action_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Reviewer identity does not authorize product writes; reviewers may perform review actions only."
+    },
+    {
+      "id": "assigned_explorer_write_denied",
+      "scenario": "An assigned explorer attempts a write inside its own evidence scope.",
+      "state": {"children": [{"id": "explorer-38", "role": "explorer", "status": "active", "acceptance_relevant": false, "scope": ["api/recon"]}]},
+      "action": {"actor": "explorer", "actor_child_id": "explorer-38", "kind": "write", "scope": ["api/recon"]},
+      "expected": {"decision": "deny", "reason_code": "role_action_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Explorer identity authorizes evidence and recon only, never implementation writes."
+    },
+    {
+      "id": "nonprimary_reuse_denied",
+      "scenario": "An assigned explorer presents a complete evidence snapshot but attempts Sol-primary evidence reuse control.",
+      "state": {"children": [{"id": "explorer-39", "role": "explorer", "status": "active", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-39-handoff", "child_id": "explorer-39", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-39", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "explorer", "actor_child_id": "explorer-39", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-39-handoff", "child_id": "explorer-39", "role": "explorer", "artifact_digest": "digest-explorer-39"}}},
+      "expected": {"decision": "deny", "reason_code": "primary_only_action", "terminal_barrier": false},
+      "expected_outcome": "Evidence reuse is a Sol-primary decision even when an explorer owns and can cite the underlying handoff."
+    },
+    {
+      "id": "acceptance_ignores_unrelated_failed_child",
+      "scenario": "A relevant worker is complete while an unrelated non-relevant failed explorer has no rescope request.",
+      "state": {"children": [{"id": "worker-40", "role": "worker", "status": "succeeded", "writer": true, "acceptance_relevant": true, "scope": ["src/complete.py"], "handoff_inspected": true, "artifacts_inspected": true, "evidence_complete": true}, {"id": "explorer-40", "role": "explorer", "status": "failed", "acceptance_relevant": false, "rescope": false, "scope": ["docs/unrelated.md"], "disposition": null}]},
+      "action": {"actor": "primary", "kind": "accept", "scope": ["candidate"]},
+      "expected": {"decision": "allow", "reason_code": "predecessors_terminal", "terminal_barrier": true},
+      "expected_outcome": "Ignore a completely unrelated failed child; only relevant predecessors and explicit rescope children enter the acceptance barrier."
+    },
+    {
+      "id": "tester_repair_authorization_required",
+      "scenario": "A tester has writer ownership but no explicit repair authorization metadata for a product write.",
+      "state": {"children": [{"id": "tester-41", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/repair.py"]}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-41", "kind": "repair_product", "scope": ["src/repair.py"], "round": 1, "repair_authorized": true},
+      "expected": {"decision": "deny", "reason_code": "tester_repair_authorization_required", "terminal_barrier": false},
+      "expected_outcome": "Action-supplied repair flags cannot authorize a tester; the Sol-owned child ledger must contain the repair authorization."
+    },
+    {
+      "id": "valid_sol_ledger_tester_repair_allow",
+      "scenario": "Sol records a narrow failed-check repair authorization on the assigned tester ledger.",
+      "state": {"children": [{"id": "tester-42", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/repair.py"], "repair_authorization": {"issued_by": "sol", "scope": ["src/repair.py"], "failed_check_id": "check-42", "round": 7, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-42", "kind": "repair_product", "scope": ["src/repair.py"], "round": 7},
+      "expected": {"decision": "allow", "reason_code": "own_child_continuation", "terminal_barrier": false},
+      "expected_outcome": "Allow only the exact Sol-ledger-authorized product repair after matching the authorization round."
+    },
+    {
+      "id": "tester_generic_write_denied",
+      "scenario": "A tester with repair metadata attempts the generic write action.",
+      "state": {"children": [{"id": "tester-43", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/repair.py"], "repair_authorization": {"issued_by": "sol", "scope": ["src/repair.py"], "failed_check_id": "check-43", "round": 1, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-43", "kind": "write", "scope": ["src/repair.py"], "round": 1},
+      "expected": {"decision": "deny", "reason_code": "role_action_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Generic tester writes remain forbidden even when a Sol repair ledger entry exists."
+    },
+    {
+      "id": "tester_generic_edit_denied",
+      "scenario": "A tester attempts the generic edit action rather than the narrow repair action.",
+      "state": {"children": [{"id": "tester-44", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/repair.py"], "repair_authorization": {"issued_by": "sol", "scope": ["src/repair.py"], "failed_check_id": "check-44", "round": 1, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-44", "kind": "edit", "scope": ["src/repair.py"], "round": 1},
+      "expected": {"decision": "deny", "reason_code": "role_action_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Tester may not turn a repair authorization into a generic edit."
+    },
+    {
+      "id": "tester_generic_write_config_denied",
+      "scenario": "A tester attempts tracked configuration work owned by the worker.",
+      "state": {"children": [{"id": "tester-45", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["config/service.toml"], "repair_authorization": {"issued_by": "sol", "scope": ["config/service.toml"], "failed_check_id": "check-45", "round": 1, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-45", "kind": "write_config", "scope": ["config/service.toml"], "round": 1},
+      "expected": {"decision": "deny", "reason_code": "role_action_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Tracked configuration and dependency/setup changes remain worker-owned."
+    },
+    {
+      "id": "tester_generic_edit_and_test_denied",
+      "scenario": "A tester attempts the worker-owned combined edit and test action.",
+      "state": {"children": [{"id": "tester-46", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/repair.py"], "repair_authorization": {"issued_by": "sol", "scope": ["src/repair.py"], "failed_check_id": "check-46", "round": 1, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-46", "kind": "edit_and_test", "scope": ["src/repair.py"], "round": 1},
+      "expected": {"decision": "deny", "reason_code": "role_action_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "A tester repair is never a generic worker edit-and-test phase."
+    },
+    {
+      "id": "tester_repair_missing_failed_check_denied",
+      "scenario": "A tester repair authorization has no failed-check identifier.",
+      "state": {"children": [{"id": "tester-47", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/repair.py"], "repair_authorization": {"issued_by": "sol", "scope": ["src/repair.py"], "failed_check_id": "", "round": 1, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-47", "kind": "repair_product", "scope": ["src/repair.py"], "round": 1},
+      "expected": {"decision": "deny", "reason_code": "tester_repair_failed_check_missing", "terminal_barrier": false},
+      "expected_outcome": "A product repair must point to a specific failed check recorded by Sol."
+    },
+    {
+      "id": "tester_repair_scope_mismatch_denied",
+      "scenario": "A tester repair requests a path outside the Sol-ledger authorization scope.",
+      "state": {"children": [{"id": "tester-48", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/other.py"], "repair_authorization": {"issued_by": "sol", "scope": ["src/repair.py"], "failed_check_id": "check-48", "round": 1, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-48", "kind": "repair_product", "scope": ["src/other.py"], "round": 1},
+      "expected": {"decision": "deny", "reason_code": "tester_repair_scope_not_authorized", "terminal_barrier": false},
+      "expected_outcome": "Repair paths are directionally covered by the Sol-owned authorization, not caller-selected."
+    },
+    {
+      "id": "tester_repair_round_mismatch_denied",
+      "scenario": "A tester repair uses a different correction round from the Sol ledger.",
+      "state": {"children": [{"id": "tester-49", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/repair.py"], "repair_authorization": {"issued_by": "sol", "scope": ["src/repair.py"], "failed_check_id": "check-49", "round": 2, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-49", "kind": "repair_product", "scope": ["src/repair.py"], "round": 1},
+      "expected": {"decision": "deny", "reason_code": "tester_repair_round_mismatch", "terminal_barrier": false},
+      "expected_outcome": "A repair action must use the exact correction/authorization round in the child ledger."
+    },
+    {
+      "id": "tester_repair_active_worker_collision",
+      "scenario": "A valid tester repair writer attempts a disjoint write while the worker is active.",
+      "state": {"children": [{"id": "worker-50", "role": "worker", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/worker.py"]}, {"id": "tester-50", "role": "tester", "status": "active", "writer": true, "acceptance_relevant": false, "scope": ["src/repair.py"], "repair_authorization": {"issued_by": "sol", "scope": ["src/repair.py"], "failed_check_id": "check-50", "round": 1, "action": "repair_product"}}]},
+      "action": {"actor": "tester", "actor_child_id": "tester-50", "kind": "repair_product", "scope": ["src/repair.py"], "round": 1},
+      "expected": {"decision": "deny", "reason_code": "shared_worktree_writer_collision", "terminal_barrier": false},
+      "expected_outcome": "Even a narrow authorized tester repair cannot create a second shared-worktree writer."
+    },
+    {
+      "id": "resolved_handoff_evidence_reuse",
+      "scenario": "Sol cites an inspected succeeded explorer handoff with a matching evidence digest and snapshot.",
+      "state": {"children": [{"id": "explorer-51", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-51-handoff", "child_id": "explorer-51", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-51", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-51-handoff", "child_id": "explorer-51", "role": "explorer", "artifact_digest": "digest-explorer-51"}}},
+      "expected": {"decision": "reuse", "reason_code": "evidence_fresh", "terminal_barrier": false},
+      "expected_outcome": "Reuse is allowed only after provenance resolves to the inspected handoff ledger entry."
+    },
+    {
+      "id": "unknown_handoff_invalidated",
+      "scenario": "A snapshot cites a handoff identifier absent from the state ledger.",
+      "state": {"children": [{"id": "explorer-52", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": []},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "unknown-handoff", "child_id": "explorer-52", "role": "explorer", "artifact_digest": "digest-unknown"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_unresolved", "terminal_barrier": false},
+      "expected_outcome": "An unknown handoff cannot establish evidence provenance."
+    },
+    {
+      "id": "wrong_handoff_child_invalidated",
+      "scenario": "A handoff exists but provenance names a different child identity.",
+      "state": {"children": [{"id": "explorer-53", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-53-handoff", "child_id": "explorer-53", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-53", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-53-handoff", "child_id": "wrong-child", "role": "explorer", "artifact_digest": "digest-explorer-53"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_unresolved", "terminal_barrier": false},
+      "expected_outcome": "Provenance must resolve to the exact child that produced the inspected handoff."
+    },
+    {
+      "id": "uninspected_handoff_invalidated",
+      "scenario": "A succeeded explorer handoff exists but Sol has not inspected it.",
+      "state": {"children": [{"id": "explorer-54", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-54-handoff", "child_id": "explorer-54", "role": "explorer", "status": "succeeded", "inspected": false, "artifact_digest": "digest-explorer-54", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-54-handoff", "child_id": "explorer-54", "role": "explorer", "artifact_digest": "digest-explorer-54"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_unresolved", "terminal_barrier": false},
+      "expected_outcome": "A handoff is not reusable until its ledger inspection flag is true."
+    },
+    {
+      "id": "failed_handoff_invalidated",
+      "scenario": "The cited explorer handoff belongs to a failed child.",
+      "state": {"children": [{"id": "explorer-55", "role": "explorer", "status": "failed", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-55-handoff", "child_id": "explorer-55", "role": "explorer", "status": "failed", "inspected": true, "artifact_digest": "digest-explorer-55", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-55-handoff", "child_id": "explorer-55", "role": "explorer", "artifact_digest": "digest-explorer-55"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_unresolved", "terminal_barrier": false},
+      "expected_outcome": "Failed child output cannot be cited as fresh reusable evidence."
+    },
+    {
+      "id": "handoff_digest_mismatch_invalidated",
+      "scenario": "The cited handoff digest does not match the provenance digest.",
+      "state": {"children": [{"id": "explorer-56", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-56-handoff", "child_id": "explorer-56", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-56", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-56-handoff", "child_id": "explorer-56", "role": "explorer", "artifact_digest": "wrong-digest"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_digest_mismatch", "terminal_barrier": false},
+      "expected_outcome": "A handoff digest mismatch invalidates provenance instead of trusting caller-supplied evidence."
+    },
+    {
+      "id": "handoff_snapshot_mismatch_invalidated",
+      "scenario": "The cited handoff snapshot differs from the requested evidence snapshot.",
+      "state": {"children": [{"id": "explorer-57", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-57-handoff", "child_id": "explorer-57", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-57", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "feature/mismatch", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-57-handoff", "child_id": "explorer-57", "role": "explorer", "artifact_digest": "digest-explorer-57"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_mismatch", "terminal_barrier": false},
+      "expected_outcome": "Every reuse dimension must match the inspected handoff snapshot before current-state freshness is considered."
+    },
+    {
+      "id": "handoff_scope_escape_invalidated",
+      "scenario": "The requested reuse scope adds a path outside the inspected handoff scope.",
+      "state": {"children": [{"id": "explorer-58", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-58-handoff", "child_id": "explorer-58", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-58", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract", "api extra"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-58-handoff", "child_id": "explorer-58", "role": "explorer", "artifact_digest": "digest-explorer-58"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_drift", "terminal_barrier": false},
+      "expected_outcome": "A fully covered handoff scope is required; an extra requested path invalidates reuse."
+    },
+    {
+      "id": "worker_handoff_role_not_admitted",
+      "scenario": "State attempts to expand evidence reuse to a worker handoff.",
+      "state": {"allowed_evidence_roles": ["worker"], "children": [{"id": "worker-59", "role": "worker", "status": "succeeded", "writer": true, "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "worker-59-handoff", "child_id": "worker-59", "role": "worker", "status": "succeeded", "inspected": true, "artifact_digest": "digest-worker-59", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "worker-59-handoff", "child_id": "worker-59", "role": "worker", "artifact_digest": "digest-worker-59"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_unresolved", "terminal_barrier": false},
+      "expected_outcome": "A state-supplied allowed_evidence_roles list cannot admit worker evidence; reuse is fixed to explorer roles."
+    },
+    {
+      "id": "tester_handoff_role_not_admitted",
+      "scenario": "State attempts to expand evidence reuse to a tester handoff.",
+      "state": {"allowed_evidence_roles": ["tester"], "children": [{"id": "tester-60", "role": "tester", "status": "succeeded", "writer": false, "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "tester-60-handoff", "child_id": "tester-60", "role": "tester", "status": "succeeded", "inspected": true, "artifact_digest": "digest-tester-60", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "tester-60-handoff", "child_id": "tester-60", "role": "tester", "artifact_digest": "digest-tester-60"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_unresolved", "terminal_barrier": false},
+      "expected_outcome": "A state-supplied allowed_evidence_roles list cannot admit tester evidence; reuse is fixed to explorer roles."
+    },
+    {
+      "id": "reviewer_handoff_role_not_admitted",
+      "scenario": "State attempts to expand evidence reuse to a reviewer handoff.",
+      "state": {"allowed_evidence_roles": ["reviewer"], "children": [{"id": "reviewer-61", "role": "reviewer", "status": "succeeded", "writer": false, "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "reviewer-61-handoff", "child_id": "reviewer-61", "role": "reviewer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-reviewer-61", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "reviewer-61-handoff", "child_id": "reviewer-61", "role": "reviewer", "artifact_digest": "digest-reviewer-61"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_unresolved", "terminal_barrier": false},
+      "expected_outcome": "A state-supplied allowed_evidence_roles list cannot admit reviewer evidence; reuse is fixed to explorer roles."
+    },
+    {
+      "id": "child_handoff_scope_mismatch_invalidated",
+      "scenario": "The inspected handoff claims a broader scope than its cited explorer child owns.",
+      "state": {"children": [{"id": "explorer-62", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": ["api contract", "api extra"], "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-62-handoff", "child_id": "explorer-62", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-62", "scope": ["api contract", "api extra"], "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": ["api contract", "api extra"], "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-62-handoff", "child_id": "explorer-62", "role": "explorer", "artifact_digest": "digest-explorer-62"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_scope_not_child_covered", "terminal_barrier": false},
+      "expected_outcome": "Handoff scope must be directionally covered by the cited child ledger before reuse can proceed."
+    },
+    {
+      "id": "malformed_current_evidence_invalidated",
+      "scenario": "Current evidence contains an empty branch value instead of a known freshness dimension.",
+      "state": {"children": [{"id": "explorer-63", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-63-handoff", "child_id": "explorer-63", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-63", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-63-handoff", "child_id": "explorer-63", "role": "explorer", "artifact_digest": "digest-explorer-63"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false},
+      "expected_outcome": "An empty current evidence freshness dimension is malformed and cannot be reused."
+    },
+    {
+      "id": "malformed_snapshot_evidence_invalidated",
+      "scenario": "The requested evidence snapshot contains an empty contracts list.",
+      "state": {"children": [{"id": "explorer-64", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-64-handoff", "child_id": "explorer-64", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-64", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": [], "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-64-handoff", "child_id": "explorer-64", "role": "explorer", "artifact_digest": "digest-explorer-64"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false},
+      "expected_outcome": "An empty snapshot freshness dimension is malformed and cannot be reused."
+    },
+    {
+      "id": "malformed_handoff_evidence_invalidated",
+      "scenario": "The inspected handoff contains an object in the base freshness dimension.",
+      "state": {"children": [{"id": "explorer-65", "role": "explorer", "status": "succeeded", "acceptance_relevant": false, "scope": ["api contract"]}], "evidence": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}, "handoffs": [{"id": "explorer-65-handoff", "child_id": "explorer-65", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-explorer-65", "scope": "api contract", "branch": "main", "base": {}, "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]},
+      "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-65-handoff", "child_id": "explorer-65", "role": "explorer", "artifact_digest": "digest-explorer-65"}}},
+      "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false},
+      "expected_outcome": "A malformed handoff freshness dimension invalidates provenance before reuse."
+    }
+  ],
+  "adversarial_mutations": [
+    {"id": "worker_active_to_terminal", "base_case": "forbidden_primary_edit_tests_while_worker_active", "state_patch": {"children.0.status": "succeeded", "children.0.handoff_inspected": true, "children.0.artifacts_inspected": true, "children.0.evidence_complete": true}, "action_patch": {"kind": "accept"}, "expected": {"decision": "allow", "reason_code": "predecessors_terminal", "terminal_barrier": true}},
+    {"id": "timeout_to_return", "base_case": "wait_silence_no_chatter", "state_patch": {}, "action_patch": {"wait_event": "new_return"}, "expected": {"decision": "update", "reason_code": "new_wait_evidence", "terminal_barrier": false}},
+    {"id": "evidence_drift_to_fresh", "base_case": "drifted_evidence_invalidated", "state_patch": {"evidence.branch": "main", "evidence.base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "evidence.dirty_ownership": "unchanged", "evidence.config_runtime": "unchanged", "evidence.contracts": "unchanged", "evidence.contradiction": false}, "action_patch": {}, "expected": {"decision": "reuse", "reason_code": "evidence_fresh", "terminal_barrier": false}},
+    {"id": "elapsed_to_safety_interrupt", "base_case": "unauthorized_interrupt_denied", "state_patch": {}, "action_patch": {"interrupt_reason": "safety_boundary"}, "expected": {"decision": "allow", "reason_code": "interrupt_authorized", "terminal_barrier": false}},
+    {"id": "nonoverlap_to_scope_collision", "base_case": "cross_role_scope_nonoverlap_allowed", "state_patch": {"children.1.scope": ["src/shared.py"]}, "action_patch": {"scope": ["src/shared.py"]}, "expected": {"decision": "deny", "reason_code": "active_child_scope_overlap", "terminal_barrier": false}},
+    {"id": "failed_disposition_still_blocks", "base_case": "failed_child_with_disposition_still_blocks", "state_patch": {"children.0.disposition": null}, "action_patch": {}, "expected": {"decision": "wait", "reason_code": "terminal_disposition_required", "terminal_barrier": true}},
+    {"id": "successful_evidence_to_incomplete_wait", "base_case": "all_evidence_complete_allows_accept", "state_patch": {"children.0.evidence_complete": false}, "action_patch": {}, "expected": {"decision": "wait", "reason_code": "required_evidence_unresolved", "terminal_barrier": true}},
+    {"id": "orthogonal_extra_scope_denied", "base_case": "allowed_orthogonal_primary_prep", "state_patch": {}, "action_patch": {"scope": ["docs/release-notes.md", "src/undeclared.py"]}, "expected": {"decision": "deny", "reason_code": "orthogonal_scope_not_authorized", "terminal_barrier": false}},
+    {"id": "evidence_extra_scope_to_covered_reuse", "base_case": "evidence_extra_scope_invalidated", "state_patch": {}, "action_patch": {"scope": ["api contract"]}, "expected": {"decision": "reuse", "reason_code": "evidence_fresh", "terminal_barrier": false}},
+    {"id": "actor_scope_escape_mutation", "base_case": "actor_scope_escape_denied", "state_patch": {"children.0.scope": ["src/two.py"]}, "action_patch": {}, "expected": {"decision": "allow", "reason_code": "own_child_continuation", "terminal_barrier": false}},
+    {"id": "primary_scope_gate_to_allowed", "base_case": "primary_unlisted_disjoint_write_denied", "state_patch": {"primary_orthogonal_scopes": ["src/unlisted.py"]}, "action_patch": {}, "expected": {"decision": "allow", "reason_code": "scope_available", "terminal_barrier": false}},
+    {"id": "nonprimary_reuse_to_primary", "base_case": "nonprimary_reuse_denied", "state_patch": {"children.0.status": "succeeded"}, "action_patch": {"actor": "primary"}, "expected": {"decision": "reuse", "reason_code": "evidence_fresh", "terminal_barrier": false}},
+    {"id": "unrelated_failure_to_relevant_block", "base_case": "acceptance_ignores_unrelated_failed_child", "state_patch": {"children.1.acceptance_relevant": true}, "action_patch": {}, "expected": {"decision": "wait", "reason_code": "terminal_disposition_required", "terminal_barrier": true}},
+    {"id": "tester_repair_ledger_authorized", "base_case": "tester_repair_authorization_required", "state_patch": {"children.0.repair_authorization": {"issued_by": "sol", "scope": ["src/repair.py"], "failed_check_id": "check-41", "round": 1, "action": "repair_product"}}, "action_patch": {}, "expected": {"decision": "allow", "reason_code": "own_child_continuation", "terminal_barrier": false}},
+    {"id": "tester_missing_check_to_valid_repair", "base_case": "tester_repair_missing_failed_check_denied", "state_patch": {"children.0.repair_authorization.failed_check_id": "check-fixed"}, "action_patch": {}, "expected": {"decision": "allow", "reason_code": "own_child_continuation", "terminal_barrier": false}},
+    {"id": "tester_round_to_matching_repair", "base_case": "tester_repair_round_mismatch_denied", "state_patch": {"children.0.repair_authorization.round": 1}, "action_patch": {}, "expected": {"decision": "allow", "reason_code": "own_child_continuation", "terminal_barrier": false}},
+    {"id": "unknown_handoff_to_resolved", "base_case": "unknown_handoff_invalidated", "state_patch": {"handoffs": [{"id": "unknown-handoff", "child_id": "explorer-52", "role": "explorer", "status": "succeeded", "inspected": true, "artifact_digest": "digest-unknown", "scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true}]}, "action_patch": {}, "expected": {"decision": "reuse", "reason_code": "evidence_fresh", "terminal_barrier": false}},
+    {"id": "handoff_inspection_to_resolved", "base_case": "uninspected_handoff_invalidated", "state_patch": {"handoffs.0.inspected": true}, "action_patch": {}, "expected": {"decision": "reuse", "reason_code": "evidence_fresh", "terminal_barrier": false}},
+    {"id": "handoff_digest_to_resolved", "base_case": "handoff_digest_mismatch_invalidated", "state_patch": {}, "action_patch": {"evidence_snapshot.provenance.artifact_digest": "digest-explorer-56"}, "expected": {"decision": "reuse", "reason_code": "evidence_fresh", "terminal_barrier": false}},
+    {"id": "handoff_snapshot_to_resolved", "base_case": "handoff_snapshot_mismatch_invalidated", "state_patch": {}, "action_patch": {"evidence_snapshot.branch": "main"}, "expected": {"decision": "reuse", "reason_code": "evidence_fresh", "terminal_barrier": false}},
+    {"id": "worker_role_expansion_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"allowed_evidence_roles": ["worker"], "children.0.role": "worker", "handoffs.0.role": "worker"}, "action_patch": {"evidence_snapshot.provenance.role": "worker"}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_unresolved", "terminal_barrier": false}},
+    {"id": "tester_role_expansion_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"allowed_evidence_roles": ["tester"], "children.0.role": "tester", "handoffs.0.role": "tester"}, "action_patch": {"evidence_snapshot.provenance.role": "tester"}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_unresolved", "terminal_barrier": false}},
+    {"id": "reviewer_role_expansion_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"allowed_evidence_roles": ["reviewer"], "children.0.role": "reviewer", "handoffs.0.role": "reviewer"}, "action_patch": {"evidence_snapshot.provenance.role": "reviewer"}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_unresolved", "terminal_barrier": false}},
+    {"id": "handoff_scope_broadened_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.scope": ["api contract", "api extra"]}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_scope_not_child_covered", "terminal_barrier": false}},
+    {"id": "current_scope_empty_string_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"evidence.scope": ""}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "current_scope_empty_list_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"evidence.scope": []}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "current_branch_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"evidence.branch": []}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "current_base_none_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"evidence.base": null}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "current_dirty_ownership_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"evidence.dirty_ownership": []}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "current_config_runtime_empty_object_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"evidence.config_runtime": {}}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "current_contracts_empty_string_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"evidence.contracts": ""}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "current_contradiction_none_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"evidence.contradiction": null}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "current_path_known_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"evidence.path_known": {}}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "snapshot_scope_empty_string_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {}, "action_patch": {"evidence_snapshot.scope": ""}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "snapshot_scope_empty_list_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {}, "action_patch": {"evidence_snapshot.scope": []}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "snapshot_branch_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {}, "action_patch": {"evidence_snapshot.branch": []}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "snapshot_base_none_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {}, "action_patch": {"evidence_snapshot.base": null}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "snapshot_dirty_ownership_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {}, "action_patch": {"evidence_snapshot.dirty_ownership": []}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "snapshot_config_runtime_empty_object_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {}, "action_patch": {"evidence_snapshot.config_runtime": {}}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "snapshot_contracts_empty_list_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {}, "action_patch": {"evidence_snapshot.contracts": []}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "snapshot_contradiction_none_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {}, "action_patch": {"evidence_snapshot.contradiction": null}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "snapshot_path_known_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {}, "action_patch": {"evidence_snapshot.path_known": {}}, "expected": {"decision": "invalidate", "reason_code": "evidence_context_malformed", "terminal_barrier": false}},
+    {"id": "handoff_scope_empty_list_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.scope": []}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
+    {"id": "handoff_branch_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.branch": []}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
+    {"id": "handoff_base_none_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.base": null}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
+    {"id": "handoff_dirty_ownership_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.dirty_ownership": []}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
+    {"id": "handoff_config_runtime_empty_object_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.config_runtime": {}}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
+    {"id": "handoff_contracts_empty_string_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.contracts": ""}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
+    {"id": "handoff_contradiction_none_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.contradiction": null}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
+    {"id": "handoff_path_known_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.path_known": {}}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}}
+  ]
+}

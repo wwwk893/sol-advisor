@@ -33,6 +33,13 @@ active worker writer; then the tester is the sole writer for that owned set. Rea
 be run concurrently when their ownership does not overlap. In a shared worktree, never run two
 writers at once. Three concurrent children is a suggested default ceiling, not a hard limit.
 
+At spawn, Sol records an active-child ownership ledger with the child role/objective, owned evidence/files/tests/review,
+acceptance relevance, explicitly allowed orthogonal primary work, and dependent phases. While an assigned child is
+nonterminal, every substantive primary action must be fully covered by the ledger's named orthogonal scope; a bounded
+non-overlapping spot-check is the only narrower exception. The primary does not duplicate or take over the child's
+evidence search, implementation, tests, runtime QA, or review because the child is slow or quiet. This is a scope lock,
+not a scheduler, and it preserves the shared-worktree one-writer rule.
+
 Detailed role, reconnaissance, packet, and return contracts live in
 [role-contracts.md](role-contracts.md).
 
@@ -120,8 +127,13 @@ fallback reason, server command/port/health/cleanup, credentials/test-data scope
 observable signals. The worker owns tracked setup; tester owns reversible runtime prep and
 no-diff preinstalled materialization, the resolved browser session, server lifecycle, and evidence.
 
-Build a compact packet from
-[role-contracts.md](role-contracts.md). State `fork_turns: none`, exact owned files,
+Before a dependent phase is started, including a reviewer phase or acceptance validation, Sol inspects current state and
+waits for every acceptance-relevant predecessor child to be terminal. Sol then inspects and dispositions each handoff
+and its artifacts. `failed`, `blocked`, or an authorized interruption is terminal only after that disposition is recorded;
+missing required evidence cannot be silently waived, and ACCEPT never consumes partial output.
+
+Build a compact packet from the [role-contracts.md](role-contracts.md) schema, including the active-child ownership
+ledger before spawn. State `fork_turns: none`, exact owned files,
 interfaces, constraints, verification commands, and a structured return. Do not copy
 the entire conversation, prompt history, or full diff.
 
@@ -156,8 +168,13 @@ fallback. Do not use an app task, nested CLI, or legacy Terra/Sol role in this l
 
 Use `list_agents` for state and `wait_agent` for completion/evidence. Use `send_message`
 for a factual progress request. Use `interrupt_agent` only for a user-requested stop,
-safety boundary, or a clearly abandoned child. Do not impose a rigid short timeout;
-waiting may be longer when the child is making progress.
+safety boundary, or evidence-supported abandonment. Prefer a long `wait_agent`; do not impose a rigid short timeout.
+Silence, elapsed time alone, or a temporarily unchanged worktree is not abandonment. Use one factual `send_message` only
+when progress evidence is genuinely needed. The same child owns correction in place; never interrupt merely because it is
+quiet.
+When `wait_agent` yields only a timeout with no new child output, blocker, state transition, or user decision, the primary
+emits no user-facing status/chatter; updates are reserved for a return/evidence, actual transition, blocker, or needed
+decision.
 
 ### INSPECT
 
@@ -181,14 +198,19 @@ create a replacement child merely to reset the counter or dodge an unresolved co
 
 ### VALIDATE
 
-Rerun the narrowest decisive acceptance subset in the primary session with local, non-browser checks
-and inspect behavior, not only exit status; browser/runtime QA remains
-with the same tester end to end unless the user explicitly asks the primary to perform it.
+After the terminal coordination barrier and handoff disposition, rerun the narrowest decisive acceptance subset in the
+primary session with local, non-browser checks and inspect behavior, not only exit status; browser/runtime QA remains
+with the same tester end to end unless the user explicitly asks the primary to perform it. The worker owns tracked
+tests/config/dependencies in its write phase, so Sol does not repeat those tests while the worker is active.
 Expand validation only when risk or impact warrants it; do not unconditionally repeat every
 child check. Confirm no out-of-scope file changed, no unrelated user edit was reverted, and
 no forbidden external mutation or secret handling occurred.
 
 ### REVIEW (optional)
+
+Review is a dependent phase: it waits for every acceptance-relevant predecessor to reach terminal state and for Sol to
+inspect/disposition each handoff before starting. Default to at most one reviewer; a second reviewer needs a distinct
+named risk axis and an explicit reason.
 
 For high-risk changes or an explicit review request, spawn `reviewer` with a fresh
 `fork_turns: none` packet and require the reviewer return schema from `role-contracts.md`.
@@ -199,7 +221,10 @@ run. Ordinary low-risk tasks do not require this extra role.
 
 ### ACCEPT / STOP
 
-Accept only when the objective, interfaces, ownership, runtime evidence, and acceptance
+Before ACCEPT, Sol repeats the terminal coordination barrier for every acceptance-relevant child and checks that all
+handoffs and artifacts have been inspected and dispositioned. Reuse fresh cited evidence only when scope, branch/base,
+dirty ownership, relevant config/runtime, and contracts are unchanged; invalidate and recon when any of those drift, a
+contradiction appears, or the needed path remains unknown. Accept only when the objective, interfaces, ownership, runtime evidence, and acceptance
 subset agree. If role availability, spawn acceptance, an explicit conflict/fallback,
 ownership, or safety rule cannot be satisfied, stop and report the exact blocker. Missing
 observable model/effort/`priority` fields after an accepted explicit request are warnings

@@ -1,47 +1,27 @@
 ---
 name: orchestration
-description: "Default unless opted out. Native Luna V2 delegates bounded work; Sol owns contracts, authorization, risk/acceptance."
+description: "Sol Advisor 0.7.0 native Luna V2 routing with Sol-owned contracts, scope locks, and terminal barriers."
 ---
 
-Load references/role-contracts.md, references/native-v2-lane.md, references/external-specialist-lane.md before delegation.
+Load references/role-contracts.md, references/native-v2-lane.md, references/external-specialist-lane.md. scripts/evaluate_coordination.py; evals/coordination_cases.json.
 
-### Sol ownership
+Sol owns contracts, authorization, risk/rollback, acceptance; worker owns coherent write phase; decision-complete. Never atomize cross-repository. Primary-only `micro-edit`: one repository, one already-inspected owned file, genuinely atomic settled change, no active writer/overlap/unclear dirty ownership, at most one narrow local non-browser check; packet and review overhead exceeds saved context. unknown runtime path, ownership, or caller flow => evidence-only RECON: `explorer` for one bounded trace;
+`deep_explorer` for cross-package/cross-repository or architecture-sensitive paths. Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known.
 
-Sol owns intent, architecture/contracts, authorization, risk/rollback, integration, acceptance. `worker` owns
-decision-complete coherent write phase; don't atomize multi-file/cross-repo work. Primary-only `micro-edit`
-requires one repository/file, one settled change, no active writer/dirty ownership ambiguity; one narrow local
-non-browser check if packet and review overhead exceed saved context.
-Commit/push independent.
+Native roles: `deep_explorer`, `explorer`, `worker`, `tester`, `reviewer`; tools: `spawn_agent`, `list_agents`, `wait_agent`,
+`followup_task`, `send_message`, `interrupt_agent`. Does not require app-task tools or Terra/Sol compatibility.
+Use `model=gpt-5.6-luna`, `reasoning_effort=max`, `fork_turns=none`. hard prerequisites; no silent fallback. Missing
+model/effort/priority: `unobservable`; correct failures with same child; unresolved=`blocked`. External specialists
+are not a sixth native role; no production source ownership; accept it before issuing a Luna `worker` packet.
 
-Non-trivial work with an unknown runtime path, ownership, or caller flow -> evidence-only RECON: `explorer` for one bounded trace; `deep_explorer` for cross-package/cross-repository, competing, legacy-generated, or architecture-sensitive paths. Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known.
+Coordination: active-child ownership ledger for nonterminal scopes; do not duplicate/take over; correct same child.
+Terminal coordination barrier waits acceptance-relevant predecessors before dependent/ACCEPT; inspect handoff/artifacts;
+failed/blocked/interrupted need disposition; missing evidence cannot waive. Prefer long `wait_agent`; `list_agents` state;
+silence is not abandonment; timeout-only waits emit no user-facing status/chatter. Reuse fresh evidence if scope/base/ownership/
+config-runtime/contracts unchanged; drift/contradiction/unknown path invalidates/recon. Worker owns tracked tests/config/dependencies;
+tester owns browser/runtime QA; after barrier Sol runs the narrowest decisive acceptance subset with local, non-browser checks
+when risk or impact warrants it.
 
-### Native V2
-
-Choose smallest role: `deep_explorer`, `explorer`, `worker`, `tester`, or `reviewer`. Native tools: `spawn_agent`,
-`list_agents`, `wait_agent`, `followup_task`, `send_message`, `interrupt_agent`. Native V2 does not require app-task
-tools or legacy Terra/Sol compatibility lanes. Request:
-
-```text
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
-model=gpt-5.6-luna
-reasoning_effort=max
-fork_turns=none
-```
-
-Role availability/accepted routing are hard prerequisites; no silent fallback. Missing model/effort/priority:
-`unobservable` absent conflict; correct failures with same child; unresolved execution: `blocked`.
-External specialists are opt-in, not a sixth native role: no production source ownership. Sol must inspect artifact/evidence and accept it before issuing a Luna `worker` packet.
-
-### Browser/runtime QA
-
-One `tester` owns browser/runtime QA; same tester owns evidence. Exact user-selected tools win; never silently fall back.
-Default/generic QA probes capability, records `selected route`, availability, `fallback reason`; use `$chrome:control-chrome`
-with Chrome extension/Chrome-family browser-client, registered `chrome-devtools-mcp` with headless/isolated Chrome, or
-already-installed Playwright CLI last fallback; block with exact missing capabilities. Do not install/download
-or use unselected tools. Readiness/auth/escalation mechanics are in references. Tool selection does not waive required acceptance evidence or
-justify weakening acceptance.
-
-### Acceptance boundary
-
-Readiness precedes browser action. Worker owns tracked setup; tester owns reversible runtime prep/evidence. Sol inspects same tester evidence
-and reruns the narrowest decisive acceptance subset with local, non-browser checks, expanding when risk or impact warrants it.
+Tester owns browser/runtime QA; never silently fall back. `selected route`, `availability`, `fallback reason`:
+`$chrome:control-chrome` Chrome-family browser-client; `chrome-devtools-mcp` headless/isolated; already-installed Playwright CLI
+last fallback; block missing capabilities. Tool selection does not waive acceptance evidence or justify weakening acceptance. Sol inspects same tester evidence.

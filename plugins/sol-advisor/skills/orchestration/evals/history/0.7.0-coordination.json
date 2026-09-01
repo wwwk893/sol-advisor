@@ -1,0 +1,30 @@
+{
+  "schema_version": "0.7.0-coordination-history-v1",
+  "release": "0.7.0",
+  "base": {
+    "release": "0.6.8",
+    "commit": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3"
+  },
+  "fixture": {
+    "type": "file-backed fixture",
+    "path": "evals/coordination_cases.json",
+    "sanitized": true
+  },
+  "computed_state_transition_evidence": {
+    "fixture_cases": 73,
+    "unique_case_ids": true,
+    "computed_fixture_violations": 0,
+    "expected_oracle_matches": true,
+    "mutation_checks": 50,
+    "authority_and_terminal_filter_holdouts": "Computed primary ledger authorization, role action ownership, Sol-ledger tester repair authorization, fixed explorer-only evidence-role admission, child-covered handoff scope, typed/non-empty evidence contexts, resolved handoff provenance, and relevant/rescope-only terminal filtering.",
+    "route_robustness_safety_suites": "preserved for package verifier",
+    "runtime_enforcement": "instruction-contract evidence only; no runtime scheduler is claimed"
+  },
+  "missing_evidence": [
+    "isolated A/B latency and token counts for 0.6.8 versus 0.7.0",
+    "actual service-tier response metadata",
+    "production child-state telemetry or runtime enforcement",
+    "independent blind review of output quality"
+  ],
+  "user_direction": "主代理等待的时候不要说无关的东西，如果能看到子代理的返回，可以说，如果看不到只是等待，就不要碎碎念"
+}

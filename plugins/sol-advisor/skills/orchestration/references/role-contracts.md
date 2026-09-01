@@ -33,6 +33,56 @@ evidence under an exact Sol-owned question or execute a decision-complete packet
 silently widen those decisions. Explorers return evidence and options, reviewers return
 findings and a recommendation, and Sol makes the final choice.
 
+## Active-child scope lock
+
+At every spawn, Sol records a compact ownership ledger before assigning work. The ledger names the child role and
+objective; owned evidence, files, tests, or review; acceptance relevance; explicitly allowed orthogonal primary work;
+and dependent phases. The ledger is the scope lock for the child's nonterminal lifetime. While any assigned child is
+nonterminal, every substantive primary action must be fully covered by the ledger's explicitly named orthogonal scope;
+a bounded non-overlapping spot-check is the only narrower exception. Sol must not duplicate or take over the child's evidence search, implementation, tests, runtime QA, or review because
+the child is slow, quiet, or the worktree is temporarily unchanged. The shared worktree has one writer at a time.
+
+The ownership ledger is coordination metadata, not an implementation scheduler. It does not change the five native
+roles, their explicit Luna route, or the existing `priority`/`unobservable` semantics. A child handoff does not waive
+the lock: the primary inspects the actual artifacts and sends a targeted correction to the same child when evidence is
+missing or contradictory.
+
+## Role action ownership
+
+An assigned child may continue only actions covered by its role: `explorer` and `deep_explorer` perform evidence/recon;
+`worker` performs its owned write, test, config, and dependency actions with explicit `writer: true` for writes; `tester`
+performs runtime/browser/test actions and product repair only with `writer: true` plus explicit repair authorization;
+`reviewer` performs review only. `reuse_evidence`, `wait_agent`-style monitoring, dependent phase control, ACCEPT, and
+interrupt remain primary-only. The evaluator in `scripts/evaluate_coordination.py` computes these transitions from the
+shared `evals/coordination_cases.json` fixture; it is contract evidence, not runtime scheduling or enforcement.
+
+## Terminal coordination barrier
+
+Before any dependent phase (including reviewer work or acceptance validation), and before ACCEPT, Sol inspects current
+child state and waits for every acceptance-relevant predecessor to reach a terminal state. Only then does Sol inspect
+and disposition each predecessor's handoff and artifacts. `failed`, `blocked`, and an authorized interruption are
+terminal for coordination only after Sol records their disposition; missing required evidence cannot be silently waived,
+and partial output cannot be accepted. A dependent reviewer therefore waits for an active worker, and acceptance waits
+for all acceptance-relevant children.
+
+There is no rigid short timeout. Prefer a long `wait_agent`; use `list_agents` for preflight, state transitions, or
+user-requested status, and send one factual `send_message` only when progress evidence is genuinely needed. Silence,
+elapsed time alone, or a temporarily unchanged worktree is not abandonment. `interrupt_agent` remains limited to a user
+stop, a safety boundary, or evidence-supported abandonment.
+When `wait_agent` yields only a timeout with no new child output, blocker, state transition, or user decision, emit no
+user-facing status/chatter; user-facing updates are reserved for a child return/evidence, actual state transition,
+explicit blocker, or needed user decision.
+
+## Evidence freshness and phase ownership
+
+Sol may reuse a fresh cited evidence handoff only when scope, branch/base, dirty ownership, relevant configuration/runtime,
+and contracts are unchanged. Any such drift, a contradiction, or an unresolved path invalidates the evidence and
+requires fresh RECON or a targeted correction to the same child; do not spawn an explorer merely to repeat sufficient
+evidence. The worker owns tracked tests, configuration, and dependencies in its coherent write phase. One tester owns
+browser/runtime QA end to end. After predecessor children are terminal, Sol runs only the narrowest local non-browser
+acceptance subset. Default to at most one reviewer; a second reviewer requires a distinct named risk axis and an explicit
+reason. Shared-worktree one-writer and correction-in-place rules remain in force.
+
 ## Proactive reconnaissance boundary
 
 For a non-trivial repository task, Sol first classifies which facts are already known and which
@@ -210,6 +260,13 @@ You own only:
 You do not own:
 - <excluded paths, parent-owned files, and other stacks>
 Preserve unrelated edits and adapt to concurrent changes.
+
+ACTIVE-CHILD LEDGER
+- Child role/objective: <assigned role and bounded objective>
+- Owned evidence/files/tests/review: <exact scope>
+- Acceptance relevance: <which acceptance gates depend on this child>
+- Explicitly allowed orthogonal primary work: <named non-overlapping work, or none>
+- Dependent phases: <phases that wait for this child to reach terminal state>
 
 INTERFACES
 - <Signatures, schemas, commands, routes, or compatibility behavior.>
