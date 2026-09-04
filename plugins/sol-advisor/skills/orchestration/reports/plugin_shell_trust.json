@@ -1,6 +1,6 @@
 {
-  "schema_version": "0.7.0-plugin-shell-trust-v1",
-  "release": "0.7.0",
+  "schema_version": "0.7.1-plugin-shell-trust-v1",
+  "release": "0.7.1",
   "scope": "plugins/sol-advisor/scripts/*.sh",
   "generated_for": "source-contract-without-generated-reports",
   "checks": {
@@ -22,7 +22,7 @@
     },
     {
       "path": "scripts/verify.sh",
-      "sha256": "28628c57cbbe8697fd64d8f465a4f6b1c328d255ef77a64f79e77f91b8c89f82",
+      "sha256": "413817c83284f72f4dfdbeb33cca6c57a60da973e95c26ba7d7fd0bd8e7d4682",
       "syntax": "pass",
       "network_capabilities": [],
       "file_write_classification": "read-only package checks plus disposable temporary files cleaned inside the guarded temp boundary",
@@ -31,7 +31,7 @@
     },
     {
       "path": "scripts/verify-coordination.sh",
-      "sha256": "aa166a7bc9ba6da7d2cc6c9bf2a68400b997af320e14b519ce3b9b87a092b574",
+      "sha256": "bab8ccd91f3f430ac27e5e83dd9a7e54b265db69e24e3fee0b380ad81c4871ee",
       "syntax": "pass",
       "network_capabilities": [],
       "file_write_classification": "read-only package checks plus disposable temporary files only if future checks declare a guarded boundary",
@@ -40,7 +40,7 @@
     },
     {
       "path": "scripts/verify-external-specialist.sh",
-      "sha256": "6152649f10a4d6ee48092ab7a67c68419799e08a0ab2a7beec1fca23391f2fc4",
+      "sha256": "8730ec851e0617785fa8de5f806367f9abd36f3eb46db69ba00415c332cadcbc",
       "syntax": "pass",
       "network_capabilities": [],
       "file_write_classification": "read-only package checks; no product or external-service writes",
@@ -48,8 +48,17 @@
       "installer_mutation_boundary": "not applicable: external-specialist verifier is not an installer"
     },
     {
+      "path": "scripts/verify-model-routing.sh",
+      "sha256": "c3c0abbe94a6815e8d5344c152e1a0caa574640c29677eab46d85d6d04ddf3a9",
+      "syntax": "pass",
+      "network_capabilities": [],
+      "file_write_classification": "read-only package checks; no product or external-service writes",
+      "side_effect_classification": "reads local routing contracts and fixtures and runs local Python checks only",
+      "installer_mutation_boundary": "not applicable: model-routing verifier is not an installer"
+    },
+    {
       "path": "scripts/inspect-agent-runtime.sh",
-      "sha256": "ed97bad2f43ee1e7bc4e4c5e9a6d1d1b8cb5d17dc4318727886afe88cd4c4eb4",
+      "sha256": "28a3c6f3c158a23f5596becf3a525bcd5beb9db9e67d529355ebdc3e3069e3c8",
       "syntax": "pass",
       "network_capabilities": [],
       "file_write_classification": "read-only allowlisted rollout inspection plus one guarded temporary match list",

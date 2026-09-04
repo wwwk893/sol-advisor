@@ -1,19 +1,19 @@
 # Sol Advisor
 
-Sol Advisor 0.7.0 is a small Codex orchestration skill. After installation it is the
+Sol Advisor 0.7.1 is a small Codex orchestration skill. After installation it is the
 default route for every new user request. Activation does not force a child: simple
 answers, status-only, install-only, and no-subagent requests stay primary-only. Authorized
 commit/push prefers reusing the implementation worker or starting one bounded worker with
 an exact-scope packet, reducing primary-context token use. Other engineering work that
 benefits from delegation uses the native multi-agent V2 runtime. The primary session owns
 the highest-value judgment: intent, architecture/contracts, authorization, risk/rollback,
-option selection, integration, and acceptance. Runtime-configured Luna agents handle bounded
+option selection, integration, and acceptance. Runtime-configured Sol agents handle bounded
 evidence under an exact question or execution after a decision-complete packet. For non-trivial work
 with an unknown runtime path, ownership, or caller flow, start evidence-only reconnaissance: `explorer` for a
 bounded trace; `deep_explorer` for cross-package/cross-repository, competing, legacy-generated, or architecture-sensitive
 paths. The primary frames the question without exhausting the same search; Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known; packet and review overhead can keep known paths primary/worker.
 
-### Coordination guardrails in 0.7.0
+### Coordination and latency guardrails in 0.7.1
 
 At spawn, Sol records an active-child ownership ledger covering the child role/objective, owned evidence/files/tests/review,
 acceptance relevance, explicitly allowed orthogonal primary work, and dependent phases. While a child is nonterminal,
@@ -35,7 +35,9 @@ decision.
 Fresh cited evidence is reusable only when scope, branch/base, dirty ownership, relevant config/runtime, and contracts
 are unchanged; otherwise invalidate/recon. The worker owns tracked tests/config/dependencies, one tester owns browser
 runtime QA end to end, and Sol runs the narrowest local non-browser acceptance subset only after predecessors are
-terminal. Default to at most one reviewer; a second requires a distinct named risk axis and explicit reason. The
+terminal. The initial worker packet covers the whole coherent implementation/check/return phase. Tester receives one
+batched acceptance packet after the final candidate and repeats only after drift or a precise evidence gap. Reviewer is
+high-risk or explicit only, after the final candidate, with at most one logical reviewer per candidate. The
 deterministic file-backed fixture is `plugins/sol-advisor/skills/orchestration/evals/coordination_cases.json`, checked
 by a pure state/action evaluator and `scripts/verify-coordination.sh`; reports include
 `reports/output_quality_scorecard.md`, the skills/orchestration-scoped Yao trust report, and the
@@ -67,18 +69,23 @@ This release is based on [DannyMac180/sol-advisor](https://github.com/DannyMac18
 Daniel McAteer is the original author; the always-on routing adaptation is maintained
 by [wwwk893](https://github.com/wwwk893) under the MIT License.
 
-## Default native Luna V2 lane
+## Default native mixed Sol V2 lane
 
-The native lane selects a role for the task and explicitly requests
-`gpt-5.6-luna` with `max` effort. The five available role contracts are:
+The native lane selects one exact carrier, logical role, route class, model, and effort. The five role contracts are:
 
-| Role | Use it for | Default mutation boundary |
-|---|---|---|
-| `deep_explorer` | Ambiguous, cross-module, or architecture-sensitive evidence and options | Read-only |
-| `explorer` | Bounded code/data tracing and evidence collection | Read-only |
-| `worker` | A decision-complete implementation with one owned file set | The sole writer in a shared worktree |
-| `tester` | Focused tests, runtime reproduction, and failure classification | No product code by default; parent-assigned bounded repair may be allowed |
-| `reviewer` | High-risk or user-requested independent review | Read-only verdict |
+| Logical role / class | Carrier | Model / effort | Default mutation boundary |
+|---|---|---|---|
+| `explorer` / normal | `default` | `gpt-5.6-sol` / low | Read-only |
+| `deep_explorer` / normal | `default` | `gpt-5.6-sol` / medium | Read-only |
+| `worker` / normal | `default` | `gpt-5.6-sol` / medium | Sole writer |
+| `reviewer` / normal | `default` | `gpt-5.6-sol` / medium | Read-only verdict |
+| `reviewer` / critical-risk | `default` | `gpt-5.6-sol` / high | Read-only verdict |
+| `tester` / normal | `tester` | `gpt-5.6-luna` / max | No product code by default |
+
+Exact matrix: `explorer=default/gpt-5.6-sol/low/normal`; `deep_explorer=default/gpt-5.6-sol/medium/normal`;
+`worker=default/gpt-5.6-sol/medium/normal`; `reviewer.normal=default/gpt-5.6-sol/medium/normal`;
+`reviewer.critical-risk=default/gpt-5.6-sol/high/critical-risk`; `tester=tester/gpt-5.6-luna/max/normal`.
+An exact Luna worker/explorer prompt is an explicit compatibility-route override and an activation fixture, not evidence of the default route.
 
 Use the native tools `spawn_agent`, `list_agents`, `wait_agent`, `followup_task`,
 `send_message`, and `interrupt_agent`. A normal task runs once and receives at most two
@@ -87,19 +94,21 @@ progress or the user asks for it; there is no rigid short timeout. Three concurr
 agents is a suggested ceiling, not a correctness limit. Read-only investigations may
 run in parallel, but a shared worktree has one writer at a time.
 
-Role availability and an accepted spawn with the requested Luna/max route are hard
+Carrier availability and an accepted spawn with the exact resolved route are hard
 requirements. If public spawn or rollout metadata explicitly conflicts or shows a
 fallback, stop; if accepted routing metadata omits model or effort, record an
 `unobservable` warning and continue an ordinary task when there is no conflict evidence.
-`priority` is requested/capability evidence with the same warning semantics. The primary
-model or effort is not a hard gate for this skill.
+Sol routes never request fast mode or priority service tier. Explicit `fast_mode=true` or
+`service_tier=priority` blocks; absent metadata is `unobservable`, not proof it is disabled.
 
 The native call pins the route explicitly:
 
 ```text
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
-model=gpt-5.6-luna
-reasoning_effort=max
+carrier_agent_type=<default|tester>
+logical_role=<deep_explorer|explorer|worker|tester|reviewer>
+route_class=<normal|critical-risk>
+model=<gpt-5.6-sol|gpt-5.6-luna>
+reasoning_effort=<low|medium|high|max>
 fork_turns=none
 ```
 
@@ -161,7 +170,8 @@ After installation, start a new task so the native V2 role catalog is current. T
 invoke `$sol-advisor:orchestration` or describe the work normally; the skill routes the
 request by default. It preflights the native runtime, spawns only the selected role
 when delegation adds value, monitors it, and keeps acceptance coordination in the primary
-session while the same tester owns browser/runtime QA.
+session while the same tester owns browser/runtime QA. No measured speed improvement is claimed;
+A/B latency/token/service-tier evidence remains missing.
 
 For a hosted update, run:
 
@@ -187,10 +197,13 @@ Native spawn/details metadata is the first routing evidence. When model or effor
 present, it must agree with the explicit request; when omitted, report an
 `unobservable` warning rather than inferring a fallback. The read-only
 `scripts/inspect-agent-runtime.sh` helper can inspect one exact rollout filename when
-those fields are available and emits only an allowlisted routing object. It rejects
-missing or ambiguous metadata, including null/empty sandbox, permission, or
-working-directory fields, and never prints prompts, tokens, secrets, or arbitrary
-rollout payloads.
+those fields are available and emits only an allowlisted routing object. Pass its expected carrier,
+logical role, route class, model, effort, and fork arguments. Expected logical role/route class are
+request intent, not observed runtime facts; absent host observations remain `unobservable`. Explicitly
+observed mismatches block. Missing model, effort, fast, or service-tier observations are `unobservable`. Sol fast/priority conflicts block;
+unavoidably observed tester priority is returned as a warning, never requested. Missing or ambiguous
+sandbox, permission, or working-directory fields still fail. The helper never prints prompts, secrets,
+or arbitrary rollout payloads.
 
 Run repository checks with:
 

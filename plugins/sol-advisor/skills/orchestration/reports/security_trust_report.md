@@ -5,7 +5,7 @@ see [`reports/plugin_shell_trust.md/.json`](plugin_shell_trust.md) for the machi
 of every shipped `plugins/sol-advisor/scripts/*.sh`.
 
 - OK: `True`
-- Scanned files: `16`
+- Scanned files: `17`
 - Scripts: `1`
 - Internal script modules: `0`
 - Secret findings: `0`
@@ -19,8 +19,8 @@ of every shipped `plugins/sol-advisor/scripts/*.sh`.
 - CLI help smoke failures: `0`
 - Interactive scripts: `0`
 - Package hash scope: `source-contract-without-generated-reports`
-- Package hash files: `16`
-- Package SHA256: `9d413610f96840009f9c955ad247e2eebba84e251af34b9de92d06da1ec643db`
+- Package hash files: `17`
+- Package SHA256: `11a110b124e4dbfbf1a28584fe14dd223ed7d85b5397a5ddd1432fafca55c7c8`
 
 ## Failures
 

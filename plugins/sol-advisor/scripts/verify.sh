@@ -1,5 +1,5 @@
 #!/bin/sh
-# Repository-local verification for Sol Advisor 0.7.0.
+# Repository-local verification for Sol Advisor 0.7.1.
 
 set -eu
 
@@ -17,6 +17,7 @@ installer=$script_dir/install-agents.sh
 runtime_inspector=$script_dir/inspect-agent-runtime.sh
 external_verifier=$script_dir/verify-external-specialist.sh
 coordination_verifier=$script_dir/verify-coordination.sh
+model_routing_verifier=$script_dir/verify-model-routing.sh
 templates=$plugin_dir/agents
 manifest=$plugin_dir/.codex-plugin/plugin.json
 skill=$plugin_dir/skills/orchestration/SKILL.md
@@ -32,7 +33,7 @@ robustness_cases=$plugin_dir/skills/orchestration/evals/robustness_cases.json
 allocation_cases=$plugin_dir/skills/orchestration/evals/allocation_cases.json
 semantic_config=$plugin_dir/skills/orchestration/evals/semantic_config.json
 
-for required in "$installer" "$runtime_inspector" "$external_verifier" "$coordination_verifier" "$manifest" "$skill" "$contracts" \
+for required in "$installer" "$runtime_inspector" "$external_verifier" "$coordination_verifier" "$model_routing_verifier" "$manifest" "$skill" "$contracts" \
   "$native_contract" "$luna_contract" "$ui" "$interface" "$skill_manifest" \
   "$trigger_cases" "$robustness_cases" "$allocation_cases" "$semantic_config"; do
   test -f "$required" || fail "required file missing: $required"
@@ -40,6 +41,7 @@ done
 
 sh "$external_verifier"
 sh "$coordination_verifier"
+sh "$model_routing_verifier"
 
 readme_arg=$readme
 if [ ! -f "$readme" ]; then
@@ -83,8 +85,8 @@ manifest_path, *paths = sys.argv[1:]
 doc_paths = paths[:6]
 interface_path, skill_manifest_path, trigger_cases_path, robustness_cases_path, allocation_cases_path, semantic_config_path = paths[6:]
 manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-if manifest.get("version") != "0.7.0":
-    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.7.0")
+if manifest.get("version") != "0.7.1":
+    raise SystemExit(f"manifest version is {manifest.get('version')!r}, expected 0.7.1")
 prompts = manifest.get("interface", {}).get("defaultPrompt")
 if not isinstance(prompts, list) or not prompts or not all(isinstance(p, str) and p.strip() for p in prompts):
     raise SystemExit("manifest defaultPrompt must be a non-empty list of strings")
@@ -96,8 +98,8 @@ for value, label in (
     (description, "manifest description"),
     (interface.get("longDescription", ""), "manifest longDescription"),
 ):
-    if not all(token in value for token in ("native", "Luna")):
-        raise SystemExit(f"{label} does not describe the native Luna lane")
+    if not all(token in value for token in ("native", "Sol")):
+        raise SystemExit(f"{label} does not describe the native mixed Sol lane")
 
 docs = {
     (Path(path).name if path else "README.md"): (
@@ -140,10 +142,10 @@ if unsupported_frontmatter:
     )
 try:
     legal_nested = frontmatter_top_level_keys(
-        "---\nname: orchestration\ndescription: test\nmetadata:\n  version: 0.7.0\n---\n"
+        "---\nname: orchestration\ndescription: test\nmetadata:\n  version: 0.7.1\n---\n"
     )
     illegal_top_level = frontmatter_top_level_keys(
-        "---\nname: orchestration\ndescription: test\nversion: 0.7.0\n---\n"
+        "---\nname: orchestration\ndescription: test\nversion: 0.7.1\n---\n"
     )
 except ValueError as exc:
     raise SystemExit(f"frontmatter guard self-test failed: {exc}")
@@ -234,7 +236,7 @@ for index, item in enumerate(allocation_items):
     if route not in allowed_routes:
         raise SystemExit(f"allocation case {item['id']} has unknown route {route!r}")
     if route in delegated_routes and item["luna_scope"] == "none":
-        raise SystemExit(f"delegated allocation case {item['id']} needs a bounded Luna scope")
+        raise SystemExit(f"delegated allocation case {item['id']} needs a bounded delegated scope")
     if route in {"primary", "blocked"} and item["luna_scope"] != "none":
         raise SystemExit(f"non-delegated allocation case {item['id']} must use luna_scope=none")
 required_allocation_ids = {
@@ -295,7 +297,7 @@ expected_allocation_routes = {
 }
 actual_allocation_routes = {item["id"]: item["execution_route"] for item in allocation_items}
 if actual_allocation_routes != expected_allocation_routes:
-    raise SystemExit("allocation cases changed a required Sol/Luna execution route")
+    raise SystemExit("allocation cases changed a required Sol-owned execution route")
 required_outcome_phrases = {
     "ambiguous_api_ui_contract": (
         "No implementation packet",
@@ -327,7 +329,7 @@ required_outcome_phrases = {
         "no repository evidence question remains",
     ),
     "unknown_secret_rotation": ("never delegate",),
-    "contradictory_execution_packet": ("no Luna execution role invents",),
+    "contradictory_execution_packet": ("no delegated execution role invents",),
     "cross_repo_write_phase": ("coherent cross-repository write phase", "worker owns"),
     "exact_named_chrome_route": ("exact named Chrome route", "no fallback", "required acceptance evidence"),
     "generic_browser_plugin_chrome": ("capability probing", "selected route", "fallback reason", "otherwise block"),
@@ -501,9 +503,9 @@ for key, value in (
 if "openai:" not in interface_text or "Native V2" not in interface_text:
     raise SystemExit("interface.yaml missing native V2 openai degradation")
 for key, expected in (
-    ("version", "0.7.0"),
+    ("version", "0.7.1"),
     ("owner", "wwwk893"),
-    ("updated_at", "2026-09-01"),
+    ("updated_at", "2026-09-04"),
     ("lifecycle_stage", "governed"),
     ("context_budget_tier", "production"),
     ("review_cadence", "monthly"),
@@ -552,10 +554,10 @@ for tool in tools:
         raise SystemExit(f"native tool {tool} is missing from the default lane")
 for token in ("decision-complete", "packet and review overhead"):
     if not all(token in document for document in contract_docs):
-        raise SystemExit(f"Sol/Luna cognitive allocation contract is missing {token!r}")
+        raise SystemExit(f"Sol/delegated cognitive allocation contract is missing {token!r}")
 for token in ("coherent write phase", "cross-repository"):
     if not all(token in document for document in (skill, contracts, native)):
-        raise SystemExit(f"Sol/Luna phase allocation contract is missing {token!r}")
+        raise SystemExit(f"Sol/delegated phase allocation contract is missing {token!r}")
 for token in ("micro-edit", "atomize", "Tool selection does not waive", "weakening acceptance"):
     if not all(token in document for document in (skill, contracts, native)):
         raise SystemExit(f"phase/browser acceptance contract is missing {token!r}")
@@ -585,9 +587,10 @@ for token in (
     if token not in contracts:
         raise SystemExit(f"decision-complete task packet is missing {token!r}")
 for token in (
+    "gpt-5.6-sol",
     "gpt-5.6-luna",
-    "max",
-    "priority",
+    "fast_mode=true",
+    "service_tier=priority",
     "hard prerequisites",
     "silent fallback",
     "fork_turns=none",
@@ -595,7 +598,7 @@ for token in (
 ):
     if token not in skill or token not in contracts or token not in native:
         raise SystemExit(f"native routing contract is missing {token!r}")
-for field in ("model=gpt-5.6-luna", "reasoning_effort=max", "fork_turns=none"):
+for field in ("agent_type=default", "agent_type=tester", "logical_role", "route_class", "fork_turns=none"):
     for document, label in ((skill, "SKILL"), (contracts, "role contracts"), (native, "native lane")):
         if field not in document:
             raise SystemExit(f"{label} lacks explicit native route field {field!r}")
@@ -668,6 +671,21 @@ new_opt_outs = {
 not_trigger = {item.get("text") for item in trigger_cases.get("should_not_trigger", [])}
 if not new_opt_outs.issubset(not_trigger):
     raise SystemExit("new natural Sol Advisor opt-outs are missing from trigger cases")
+explicit_luna_prompts = []
+for item in trigger_cases.get("should_trigger", []):
+    text = item.get("text", "")
+    lowered = text.lower()
+    if any(phrase in lowered for phrase in ("luna max worker", "luna max workers", "luna max explorer")):
+        explicit_luna_prompts.append(text)
+if not explicit_luna_prompts or any(
+    not any(marker in text.lower() for marker in ("use ", "have ", "run ", "请用"))
+    for text in explicit_luna_prompts
+):
+    raise SystemExit("Luna worker/explorer activation fixtures must be explicit compatibility-route requests")
+for document, label in ((skill, "SKILL"), (contracts, "role contracts"), (native, "native lane")):
+    for token in ("explicit compatibility-route override", "activation fixture", "not evidence of the default route"):
+        if token not in document:
+            raise SystemExit(f"{label} lacks explicit Luna override semantics {token!r}")
 tester_auth_tokens = (
     "same browser session",
     "visible CAPTCHA",
@@ -772,7 +790,7 @@ for token in (
 ):
     if token.lower() not in luna.lower():
         raise SystemExit(f"Luna compatibility contract missing {token}")
-if "default" not in ui.lower() or "native luna v2" not in ui.lower():
+if "0.7.1" not in ui.lower() or "mixed sol" not in ui.lower():
     raise SystemExit("openai metadata does not describe the native V2 default")
 if readme and ("default" not in readme.lower() or "legacy" not in readme.lower()):
     raise SystemExit("README does not separate default and legacy lanes")
@@ -793,7 +811,7 @@ print(
     f"{len(robustness_cases['should_not_trigger'])} opt-out)"
 )
 PY
-pass "0.7.0 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
+pass "0.7.1 metadata, Sol-primary allocation fixture, role inventory, native tools, and compatibility separation; static structure only (not runtime routing proof)"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -1039,15 +1057,19 @@ runtime_id=11111111-1111-7111-8111-111111111111
 runtime_rollout=$runtime_day/rollout-2026-08-02T00-00-00-$runtime_id.jsonl
 printf '%s\n' \
   '{"type":"response_item","payload":{"prompt":"DO_NOT_LEAK_PROMPT secret-token-123"}}' \
-  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$runtime_id\",\"parent_thread_id\":\"00000000-0000-7000-8000-000000000000\",\"agent_role\":\"worker\",\"model_provider\":\"openai\",\"agent_path\":\"/private/fixture\"}}" \
-  '{"type":"turn_context","payload":{"model":"gpt-5.6-luna","effort":"max","sandbox_policy":{"type":"workspace-write"},"permission_profile":{"type":"disabled"},"cwd":"/private/fixture"}}' \
+  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$runtime_id\",\"parent_thread_id\":\"00000000-0000-7000-8000-000000000000\",\"agent_role\":\"default\",\"model_provider\":\"openai\",\"agent_path\":\"/private/fixture\"}}" \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-sol","effort":"medium","fork_turns":"none","sandbox_policy":{"type":"workspace-write"},"permission_profile":{"type":"disabled"},"cwd":"/private/fixture"}}' \
   > "$runtime_rollout"
-runtime_output=$(sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$runtime_id")
+runtime_output=$(sh "$runtime_inspector" --sessions-dir "$runtime_sessions" --expected-carrier default --expected-logical-role worker --expected-route-class normal --expected-model gpt-5.6-sol --expected-effort medium --expected-fork-turns none "$runtime_id")
 printf '%s\n' "$runtime_output" | jq -e --arg id "$runtime_id" '
-  .thread_id == $id and .agent_role == "worker"
-  and .model == "gpt-5.6-luna" and .effort == "max"
+  .thread_id == $id and .agent_role == "default"
+  and .expected_logical_role == "worker" and .observed_logical_role == "unobservable"
+  and .expected_route_class == "normal" and .observed_route_class == "unobservable"
+  and .model == "gpt-5.6-sol" and .effort == "medium"
+  and .fork_turns == "none"
   and .sandbox_policy_type == "workspace-write"
   and .permission_profile_type == "disabled"
+  and .fast_mode == "unobservable" and .service_tier == "unobservable"
   and (has("cwd") | not) and (has("agent_path") | not)
 ' >/dev/null || fail "runtime inspector returned wrong allowlisted routing evidence"
 if printf '%s\n' "$runtime_output" | grep -Eq 'DO_NOT_LEAK|secret-token|/private/fixture'; then fail "runtime inspector leaked payload or path"; fi
@@ -1055,6 +1077,19 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" invalid >/dev/null
 zero_id=33333333-3333-7333-8333-333333333333
 if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$zero_id" >/dev/null 2>&1; then fail "runtime inspector accepted zero matches"; fi
 pass "runtime inspector emits compact safe routing evidence"
+
+observed_route_id=aaaaaaaa-aaaa-7aaa-8aaa-aaaaaaaaaaaa
+observed_route_rollout=$runtime_day/rollout-2026-08-02T00-00-01-$observed_route_id.jsonl
+printf '%s\n' \
+  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$observed_route_id\",\"agent_role\":\"default\"}}" \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-sol","effort":"medium","fork_turns":"none","logical_role":"worker","route_class":"normal","sandbox_policy":{"type":"workspace-write"},"permission_profile":{"type":"disabled"},"cwd":"/private/fixture"}}' \
+  > "$observed_route_rollout"
+observed_route_output=$(sh "$runtime_inspector" --sessions-dir "$runtime_sessions" --expected-carrier default --expected-logical-role worker --expected-route-class normal --expected-model gpt-5.6-sol --expected-effort medium --expected-fork-turns none "$observed_route_id")
+printf '%s\n' "$observed_route_output" | jq -e '
+  .expected_logical_role == "worker" and .observed_logical_role == "worker"
+  and .expected_route_class == "normal" and .observed_route_class == "normal"
+' >/dev/null || fail "runtime inspector did not distinguish matching expected and observed route metadata"
+pass "runtime inspector distinguishes caller expectations from observed route metadata"
 
 null_id=22222222-2222-7222-8222-222222222222
 null_rollout=$runtime_day/rollout-2026-08-02T00-00-01-$null_id.jsonl
@@ -1067,6 +1102,83 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$null_id" >/dev/n
 fi
 pass "runtime inspector rejects null sandbox, permission, and cwd metadata"
 
+missing_model_id=44444444-4444-7444-8444-444444444444
+missing_model_rollout=$runtime_day/rollout-2026-08-02T00-00-02-$missing_model_id.jsonl
+printf '%s\n' \
+  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$missing_model_id\",\"agent_role\":\"default\"}}" \
+  '{"type":"turn_context","payload":{"effort":"medium","fork_turns":"none","sandbox_policy":{"type":"workspace-write"},"permission_profile":{"type":"disabled"},"cwd":"/private/fixture"}}' \
+  > "$missing_model_rollout"
+missing_model_output=$(sh "$runtime_inspector" --sessions-dir "$runtime_sessions" --expected-carrier default --expected-logical-role worker --expected-route-class normal --expected-model gpt-5.6-sol --expected-effort medium --expected-fork-turns none "$missing_model_id")
+printf '%s\n' "$missing_model_output" | jq -e '.model == "unobservable" and .effort == "medium" and (.warnings | index("model unobservable")) != null' >/dev/null \
+  || fail "runtime inspector did not preserve missing-model observability semantics"
+
+missing_effort_id=55555555-5555-7555-8555-555555555555
+missing_effort_rollout=$runtime_day/rollout-2026-08-02T00-00-03-$missing_effort_id.jsonl
+printf '%s\n' \
+  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$missing_effort_id\",\"agent_role\":\"default\"}}" \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-sol","fork_turns":"none","sandbox_policy":{"type":"workspace-write"},"permission_profile":{"type":"disabled"},"cwd":"/private/fixture"}}' \
+  > "$missing_effort_rollout"
+missing_effort_output=$(sh "$runtime_inspector" --sessions-dir "$runtime_sessions" --expected-carrier default --expected-logical-role worker --expected-route-class normal --expected-model gpt-5.6-sol --expected-effort medium --expected-fork-turns none "$missing_effort_id")
+printf '%s\n' "$missing_effort_output" | jq -e '.model == "gpt-5.6-sol" and .effort == "unobservable" and (.warnings | index("effort unobservable")) != null' >/dev/null \
+  || fail "runtime inspector did not preserve missing-effort observability semantics"
+pass "runtime inspector reports missing model/effort as unobservable"
+
+tester_priority_id=66666666-6666-7666-8666-666666666666
+tester_priority_rollout=$runtime_day/rollout-2026-08-02T00-00-04-$tester_priority_id.jsonl
+printf '%s\n' \
+  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$tester_priority_id\",\"agent_role\":\"tester\"}}" \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-luna","effort":"max","fork_turns":"none","service_tier":"priority","sandbox_policy":{"type":"workspace-write"},"permission_profile":{"type":"disabled"},"cwd":"/private/fixture"}}' \
+  > "$tester_priority_rollout"
+tester_priority_output=$(sh "$runtime_inspector" --sessions-dir "$runtime_sessions" --expected-carrier tester --expected-logical-role tester --expected-route-class normal --expected-model gpt-5.6-luna --expected-effort max --expected-fork-turns none "$tester_priority_id")
+printf '%s\n' "$tester_priority_output" | jq -e '.service_tier == "priority" and .agent_role == "tester" and (.warnings | index("tester priority observed; not requested")) != null' >/dev/null \
+  || fail "runtime inspector rejected unavoidable tester priority observability"
+pass "runtime inspector records tester priority as an observed warning without requesting it"
+
+conflict_id=77777777-7777-7777-8777-777777777777
+conflict_rollout=$runtime_day/rollout-2026-08-02T00-00-02-$conflict_id.jsonl
+printf '%s\n' \
+  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$conflict_id\",\"agent_role\":\"default\"}}" \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-sol","effort":"medium","fork_turns":"none","fast_mode":true,"sandbox_policy":{"type":"workspace-write"},"permission_profile":{"type":"disabled"},"cwd":"/private/fixture"}}' \
+  > "$conflict_rollout"
+if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" --expected-carrier default --expected-logical-role worker --expected-route-class normal --expected-model gpt-5.6-sol --expected-effort medium --expected-fork-turns none "$conflict_id" >/dev/null 2>"$tmp_dir/fast-conflict.err"; then
+  fail "runtime inspector accepted explicit fast conflict"
+fi
+grep -q 'BLOCKED_ROUTE_CONFLICT' "$tmp_dir/fast-conflict.err" || fail "fast conflict lacked deterministic route-conflict evidence"
+pass "runtime inspector blocks explicit fast route conflicts"
+
+sol_priority_id=88888888-8888-7888-8888-888888888888
+sol_priority_rollout=$runtime_day/rollout-2026-08-02T00-00-06-$sol_priority_id.jsonl
+printf '%s\n' \
+  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$sol_priority_id\",\"agent_role\":\"default\"}}" \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-sol","effort":"medium","fork_turns":"none","service_tier":"priority","sandbox_policy":{"type":"workspace-write"},"permission_profile":{"type":"disabled"},"cwd":"/private/fixture"}}' \
+  > "$sol_priority_rollout"
+if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" --expected-carrier default --expected-logical-role worker --expected-route-class normal --expected-model gpt-5.6-sol --expected-effort medium --expected-fork-turns none "$sol_priority_id" >/dev/null 2>"$tmp_dir/sol-priority-conflict.err"; then
+  fail "runtime inspector accepted Sol priority conflict"
+fi
+grep -q 'BLOCKED_ROUTE_CONFLICT' "$tmp_dir/sol-priority-conflict.err" || fail "Sol priority conflict lacked deterministic route-conflict evidence"
+pass "runtime inspector blocks explicit Sol priority"
+
+for mismatch in carrier model effort fork logical_role route_class; do
+  case "$mismatch" in
+    carrier) mismatch_id=99999999-9999-7999-8999-999999999991; observed_role=tester; observed_model=gpt-5.6-sol; observed_effort=medium; observed_fork=none; observed_logical=worker; observed_route=normal ;;
+    model) mismatch_id=99999999-9999-7999-8999-999999999992; observed_role=default; observed_model=gpt-5.6-luna; observed_effort=medium; observed_fork=none; observed_logical=worker; observed_route=normal ;;
+    effort) mismatch_id=99999999-9999-7999-8999-999999999993; observed_role=default; observed_model=gpt-5.6-sol; observed_effort=high; observed_fork=none; observed_logical=worker; observed_route=normal ;;
+    fork) mismatch_id=99999999-9999-7999-8999-999999999994; observed_role=default; observed_model=gpt-5.6-sol; observed_effort=medium; observed_fork=all; observed_logical=worker; observed_route=normal ;;
+    logical_role) mismatch_id=99999999-9999-7999-8999-999999999995; observed_role=default; observed_model=gpt-5.6-sol; observed_effort=medium; observed_fork=none; observed_logical=reviewer; observed_route=normal ;;
+    route_class) mismatch_id=99999999-9999-7999-8999-999999999996; observed_role=default; observed_model=gpt-5.6-sol; observed_effort=medium; observed_fork=none; observed_logical=worker; observed_route=critical-risk ;;
+  esac
+  mismatch_rollout=$runtime_day/rollout-2026-08-02T00-00-07-$mismatch_id.jsonl
+  printf '%s\n' \
+    "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$mismatch_id\",\"agent_role\":\"$observed_role\"}}" \
+    "{\"type\":\"turn_context\",\"payload\":{\"model\":\"$observed_model\",\"effort\":\"$observed_effort\",\"fork_turns\":\"$observed_fork\",\"logical_role\":\"$observed_logical\",\"route_class\":\"$observed_route\",\"sandbox_policy\":{\"type\":\"workspace-write\"},\"permission_profile\":{\"type\":\"disabled\"},\"cwd\":\"/private/fixture\"}}" \
+    > "$mismatch_rollout"
+  if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" --expected-carrier default --expected-logical-role worker --expected-route-class normal --expected-model gpt-5.6-sol --expected-effort medium --expected-fork-turns none "$mismatch_id" >/dev/null 2>"$tmp_dir/$mismatch-conflict.err"; then
+    fail "runtime inspector accepted explicit $mismatch mismatch"
+  fi
+  grep -q 'BLOCKED_ROUTE_CONFLICT' "$tmp_dir/$mismatch-conflict.err" || fail "$mismatch mismatch lacked deterministic route-conflict evidence"
+done
+pass "runtime inspector blocks observed carrier/model/effort/fork/logical-role/route-class mismatches"
+
 if [ "${SOL_ADVISOR_SKIP_SNAPSHOT_TEST-0}" != 1 ]; then
   snapshot_dir=$(mktemp -d "$tmp_base/sol-advisor-snapshot.XXXXXX") || fail "could not create installed snapshot directory"
   cp -R "$plugin_dir" "$snapshot_dir/sol-advisor" || fail "could not copy plugin-only installed snapshot"
@@ -1075,4 +1187,4 @@ if [ "${SOL_ADVISOR_SKIP_SNAPSHOT_TEST-0}" != 1 ]; then
   pass "plugin-only installed snapshot verifier (README optional)"
 fi
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor 0.7.0 native Luna V2 and coordination checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor 0.7.1 mixed Sol V2 and coordination checks completed in $tmp_dir"

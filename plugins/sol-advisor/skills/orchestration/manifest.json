@@ -1,8 +1,8 @@
 {
   "name": "orchestration",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "owner": "wwwk893",
-  "updated_at": "2026-09-01",
+  "updated_at": "2026-09-04",
   "status": "active",
   "maturity_tier": "governed",
   "lifecycle_stage": "governed",
@@ -10,7 +10,7 @@
   "review_cadence": "monthly",
   "target_platforms": ["openai-codex"],
   "factory_components": ["references", "evals", "reports", "scripts"],
-  "input_contract": "input_files: the file-backed fixture evals/coordination_cases.json plus a new user request. For non-trivial work with an unknown runtime path, ownership, caller flow, tests/config, generated/legacy, or cross-package or cross-repository path, Sol starts proactive reconnaissance (RECON) with evidence-only explorer or deep_explorer before broad primary search; Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known. The file-backed fixture is sanitized and contains no credentials or runtime secrets.",
-  "output_contract": "output contract: a Sol-owned decision and acceptance response, optionally backed by a cited RECONNAISSANCE RETURN with ANSWER, RUNTIME PATH, RELEVANT REGIONS (observed/inferred), CONTRACT / TEST EVIDENCE, CONTRADICTIONS / UNKNOWNS, SEARCH COVERAGE, READ NEXT, and SOL DECISION NEEDED; execution handoffs report status, changed files, checks, gaps, and risk. The package emits a skills/orchestration-scoped trust report at reports/security_trust_report.md/.json, plugin shell evidence at reports/plugin_shell_trust.md/.json, and a deterministic scorecard at reports/output_quality_scorecard.md/.json. Missing evidence, including isolated A/B latency/token counts and service-tier response metadata, is labeled missing evidence and is never inferred.",
+  "input_contract": "input_files: the file-backed fixtures evals/coordination_cases.json and evals/model_routing_cases.json plus a new user request. For unknown runtime path, ownership, caller flow, tests/config, generated/legacy, or cross-package or cross-repository work, Sol starts proactive reconnaissance with evidence-only explorer or deep_explorer before broad primary search. Status answers, strict micro-edits, and decision-complete worker phases skip RECON only when location/runtime path and contract are known. Native packets carry exact carrier, logical role, route class, model, effort, and fork_turns=none. Sol routes never request fast mode or priority service tier.",
+  "output_contract": "output contract: a Sol-owned decision and acceptance response, optionally backed by a cited RECONNAISSANCE RETURN with ANSWER, RUNTIME PATH, RELEVANT REGIONS (observed/inferred), CONTRACT / TEST EVIDENCE, CONTRADICTIONS / UNKNOWNS, SEARCH COVERAGE, READ NEXT, and SOL DECISION NEEDED; execution handoffs report route evidence, status, changed files, checks, gaps, and risk. The package emits a trust report at reports/security_trust_report.md/.json, shell evidence at reports/plugin_shell_trust.md/.json, and a deterministic scorecard at reports/output_quality_scorecard.md/.json. Missing model, effort, fast, service-tier, or isolated A/B latency/token evidence is labeled missing evidence and never inferred.",
   "rollback_boundary": "rollback boundary: revert only this skill package's files and generated reports; do not mutate child worktrees, external services, user roles, or global configuration."
 }

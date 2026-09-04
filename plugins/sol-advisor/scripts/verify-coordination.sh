@@ -1,5 +1,5 @@
 #!/bin/sh
-# Verify the deterministic 0.7.0 coordination contract without network or Git.
+# Verify the deterministic 0.7.1 coordination contract without network or Git.
 
 set -eu
 
@@ -168,6 +168,20 @@ REQUIRED_CASES = {
     "malformed_current_evidence_invalidated",
     "malformed_snapshot_evidence_invalidated",
     "malformed_handoff_evidence_invalidated",
+    "worker_incomplete_packet_denied",
+    "worker_complete_packet_allowed",
+    "tester_before_final_candidate_denied",
+    "tester_first_batched_final_allowed",
+    "tester_identical_repeat_denied",
+    "tester_same_child_drift_correction_allowed",
+    "tester_same_child_evidence_gap_allowed",
+    "reviewer_before_final_candidate_denied",
+    "tester_final_candidate_active_worker_waits",
+    "reviewer_final_candidate_active_worker_waits",
+    "worker_complete_packet_active_writer_denied",
+    "worker_complete_packet_active_predecessor_waits",
+    "second_logical_reviewer_denied",
+    "same_reviewer_targeted_correction_allowed",
 }
 EVIDENCE_KEYS = (
     "scope", "branch", "base", "dirty_ownership", "config_runtime",
@@ -178,6 +192,7 @@ SHELL_INVENTORY = {
     "scripts/verify.sh": "read-only package checks plus disposable temporary files cleaned inside the guarded temp boundary",
     "scripts/verify-coordination.sh": "read-only package checks plus disposable temporary files only if future checks declare a guarded boundary",
     "scripts/verify-external-specialist.sh": "read-only package checks; no product or external-service writes",
+    "scripts/verify-model-routing.sh": "read-only package checks; no product or external-service writes",
     "scripts/inspect-agent-runtime.sh": "read-only allowlisted rollout inspection plus one guarded temporary match list",
 }
 
@@ -216,11 +231,11 @@ def read_optional(path_arg: str, label: str) -> str:
 
 
 fixture = load_json(fixture_path, "coordination fixture")
-if fixture.get("schema_version") != "0.7.0-coordination-v1":
+if fixture.get("schema_version") != "0.7.1-coordination-v1":
     raise SystemExit("coordination fixture has the wrong schema_version")
 if fixture.get("fixture_type") != "file-backed fixture" or fixture.get("sanitized") is not True:
     raise SystemExit("coordination fixture must be a sanitized file-backed fixture")
-if fixture.get("suite") != "Sol Advisor 0.7.0 coordination state transitions":
+if fixture.get("suite") != "Sol Advisor 0.7.1 coordination state transitions":
     raise SystemExit("coordination fixture has the wrong suite")
 route = fixture.get("native_route")
 if not isinstance(route, dict):
@@ -228,10 +243,9 @@ if not isinstance(route, dict):
 if route.get("roles") != ["deep_explorer", "explorer", "worker", "tester", "reviewer"]:
     raise SystemExit("coordination fixture must preserve the five native roles in order")
 for key, expected in (
-    ("model", "gpt-5.6-luna"),
-    ("reasoning_effort", "max"),
     ("fork_turns", "none"),
-    ("priority_missing_semantics", "unobservable"),
+    ("routes_fixture", "model_routing_cases.json"),
+    ("fast_service_tier_missing_semantics", "unobservable"),
 ):
     if route.get(key) != expected:
         raise SystemExit(f"coordination fixture native_route {key} changed")
@@ -246,6 +260,17 @@ if holdout != {
     "packet_review_overhead_exceeds_saved_context": True,
 }:
     raise SystemExit("coordination fixture lost the strict micro-edit predicate holdout")
+latency = fixture.get("semantic_holdouts", {}).get("latency_guardrails")
+if latency != {
+    "whole_phase_worker_packet": True,
+    "tester_after_final_candidate": True,
+    "tester_rerun_requires_drift_or_evidence_gap": True,
+    "reviewer_high_risk_or_explicit_only": True,
+    "one_logical_reviewer_per_candidate": True,
+    "external_reference_loads_only_when_admitted": True,
+    "ab_latency_token_service_tier_evidence": "missing evidence",
+}:
+    raise SystemExit("coordination fixture lost latency guardrails")
 
 cases = fixture.get("cases")
 if not isinstance(cases, list) or len(cases) < len(REQUIRED_CASES):
@@ -457,6 +482,15 @@ for token in (
     "evidence_context_malformed",
     "evidence_handoff_snapshot_malformed",
     "not a runtime scheduler",
+    "worker_packet_incomplete",
+    "tester_requires_final_candidate",
+    "identical_tester_repeat_denied",
+    "same_tester_correction_authorized",
+    "reviewer_requires_final_candidate",
+    "second_logical_reviewer_denied",
+    "same_reviewer_targeted_correction",
+    "def _writer_collision_result",
+    "Global safety invariants precede latency admission",
 ):
     if token not in evaluator_source:
         raise SystemExit(f"coordination evaluator is missing semantic implementation {token!r}")
@@ -475,7 +509,7 @@ history_fixture = history.get("fixture")
 if not isinstance(history_fixture, dict) or history_fixture.get("type") != "file-backed fixture" or history_fixture.get("path") != "evals/coordination_cases.json" or history_fixture.get("sanitized") is not True:
     raise SystemExit("coordination history must identify the shared sanitized file-backed fixture")
 computed_evidence = history.get("computed_state_transition_evidence")
-if not isinstance(computed_evidence, dict) or computed_evidence.get("fixture_cases") != len(cases) or computed_evidence.get("computed_fixture_violations") != 0 or computed_evidence.get("expected_oracle_matches") is not True or computed_evidence.get("mutation_checks") != len(mutations):
+if not isinstance(computed_evidence, dict) or computed_evidence.get("fixture_cases") != 73 or computed_evidence.get("computed_fixture_violations") != 0 or computed_evidence.get("expected_oracle_matches") is not True or computed_evidence.get("mutation_checks") != 50:
     raise SystemExit("coordination history does not report computed evaluator evidence")
 if "observed_deterministic_evidence" in history:
     raise SystemExit("coordination history must use computed evidence names, not observed runtime claims")
@@ -486,8 +520,8 @@ if history.get("user_direction") != "主代理等待的时候不要说无关的�
     raise SystemExit("coordination history must preserve the waiting-silence user direction")
 
 manifest = load_json(manifest_path, "skill manifest")
-if manifest.get("version") != "0.7.0" or manifest.get("updated_at") != "2026-09-01":
-    raise SystemExit("skill manifest version/date are not 0.7.0/2026-09-01")
+if manifest.get("version") != "0.7.1" or manifest.get("updated_at") != "2026-09-04":
+    raise SystemExit("skill manifest version/date are not 0.7.1/2026-09-04")
 if manifest.get("maturity_tier") != "governed" or manifest.get("lifecycle_stage") != "governed" or manifest.get("review_cadence") != "monthly":
     raise SystemExit("skill manifest does not declare governed monthly lifecycle")
 if manifest.get("context_budget_tier") != "production":
@@ -566,27 +600,27 @@ required_tokens = (
     "do not duplicate", "terminal coordination barrier", "acceptance-relevant predecessor", "failed", "blocked",
     "records their disposition", "missing evidence", "long `wait_agent`", "list_agents", "one factual `send_message`",
     "Silence", "not abandonment", "no user-facing status/chatter", "evidence freshness", "Invalidate",
-    "worker owns tracked", "tester owns", "narrowest local non-browser", "at most one reviewer", "distinct named risk axis",
+    "worker owns tracked", "tester owns", "narrowest local non-browser", "at most one logical reviewer", "after the final candidate",
 )
 for token in required_tokens:
     if token.lower() not in combined.lower():
         raise SystemExit(f"normative documents are missing coordination token {token!r}")
 if 'mode: "manual"' not in interface or "adapter invocation metadata" not in interface or "global AGENTS default supplies always-on routing" not in interface:
     raise SystemExit("interface activation metadata does not clarify manual adapter invocation")
-if "0.7.0" not in skill or "0.7.0" not in openai or (readme and "0.7.0" not in readme):
-    raise SystemExit("human-facing coordination surfaces are missing 0.7.0")
+if "0.7.1" not in skill or "0.7.1" not in openai or (readme and "0.7.1" not in readme):
+    raise SystemExit("human-facing coordination surfaces are missing 0.7.1")
 for role in ROLES:
     for label, document in (("SKILL.md", skill), ("role-contracts.md", contracts), ("native-v2-lane.md", native)):
         if role not in document:
             raise SystemExit(f"native role {role} is missing from {label}")
-for field in ("model=gpt-5.6-luna", "reasoning_effort=max", "fork_turns=none"):
+for field in ("agent_type=default", "agent_type=tester", "logical_role", "route_class", "fork_turns=none"):
     for label, document in (("SKILL.md", skill), ("role-contracts.md", contracts), ("native-v2-lane.md", native)):
         if field not in document:
             raise SystemExit(f"{label} is missing explicit native route field {field}")
 
 scorecard = load_json(scorecard_path, "output quality scorecard")
-if scorecard.get("release") != "0.7.0" or scorecard.get("fixture", {}).get("path") != "evals/coordination_cases.json":
-    raise SystemExit("output quality scorecard does not identify the 0.7.0 shared fixture")
+if scorecard.get("release") != "0.7.1" or scorecard.get("fixture", {}).get("path") != "evals/coordination_cases.json":
+    raise SystemExit("output quality scorecard does not identify the 0.7.1 shared fixture")
 if scorecard.get("baseline", {}).get("release") != "0.6.8" or scorecard.get("baseline", {}).get("commit") != BASE_COMMIT:
     raise SystemExit("output quality scorecard does not identify the 0.6.8 base")
 if scorecard.get("computed_state_transition_evidence", {}).get("computed_fixture_violations") != 0:
@@ -660,7 +694,7 @@ if f"Package hash files: `{len(trust_files)}`" not in trust_markdown or f"Packag
     raise SystemExit("Yao trust Markdown digest/file count is stale")
 
 shell_report = load_json(shell_trust_path, "plugin shell trust report")
-if shell_report.get("schema_version") != "0.7.0-plugin-shell-trust-v1" or shell_report.get("scope") != "plugins/sol-advisor/scripts/*.sh":
+if shell_report.get("schema_version") != "0.7.1-plugin-shell-trust-v1" or shell_report.get("scope") != "plugins/sol-advisor/scripts/*.sh":
     raise SystemExit("plugin shell trust report has the wrong schema or scope")
 entries = shell_report.get("scripts")
 if not isinstance(entries, list) or {entry.get("path") for entry in entries if isinstance(entry, dict)} != set(SHELL_INVENTORY):
@@ -690,4 +724,4 @@ if "explicit compatibility-agent target" not in installer.get("installer_mutatio
 print(f"computed coordination evaluator, {len(cases)} unique transitions, {len(mutations)} mutations, reports, shell hashes, and normative docs validated")
 PY
 
-pass "0.7.0 computed active-child lock, terminal barrier, wait policy, evidence reuse/invalidation, and report contracts"
+pass "0.7.1 computed active-child lock, terminal barrier, latency policy, evidence reuse/invalidation, and report contracts"

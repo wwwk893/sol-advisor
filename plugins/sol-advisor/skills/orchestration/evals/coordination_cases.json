@@ -1,14 +1,13 @@
 {
-  "schema_version": "0.7.0-coordination-v1",
-  "suite": "Sol Advisor 0.7.0 coordination state transitions",
+  "schema_version": "0.7.1-coordination-v1",
+  "suite": "Sol Advisor 0.7.1 coordination state transitions",
   "fixture_type": "file-backed fixture",
   "sanitized": true,
   "native_route": {
     "roles": ["deep_explorer", "explorer", "worker", "tester", "reviewer"],
-    "model": "gpt-5.6-luna",
-    "reasoning_effort": "max",
     "fork_turns": "none",
-    "priority_missing_semantics": "unobservable"
+    "routes_fixture": "model_routing_cases.json",
+    "fast_service_tier_missing_semantics": "unobservable"
   },
   "semantic_holdouts": {
     "strict_micro_edit_predicate": {
@@ -18,6 +17,15 @@
       "no_active_writer_overlap_or_unclear_dirty_ownership": true,
       "at_most_one_narrow_local_non_browser_check": true,
       "packet_review_overhead_exceeds_saved_context": true
+    },
+    "latency_guardrails": {
+      "whole_phase_worker_packet": true,
+      "tester_after_final_candidate": true,
+      "tester_rerun_requires_drift_or_evidence_gap": true,
+      "reviewer_high_risk_or_explicit_only": true,
+      "one_logical_reviewer_per_candidate": true,
+      "external_reference_loads_only_when_admitted": true,
+      "ab_latency_token_service_tier_evidence": "missing evidence"
     }
   },
   "cases": [
@@ -604,6 +612,118 @@
       "action": {"actor": "primary", "kind": "reuse_evidence", "scope": ["api contract"], "evidence_snapshot": {"scope": "api contract", "branch": "main", "base": "d4c2e588ea9ba9eabb6f5fc028b33a43da0a7fc3", "dirty_ownership": "unchanged", "config_runtime": "unchanged", "contracts": "unchanged", "contradiction": false, "path_known": true, "provenance": {"handoff_id": "explorer-65-handoff", "child_id": "explorer-65", "role": "explorer", "artifact_digest": "digest-explorer-65"}}},
       "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false},
       "expected_outcome": "A malformed handoff freshness dimension invalidates provenance before reuse."
+    },
+    {
+      "id": "worker_incomplete_packet_denied",
+      "scenario": "Sol attempts to spawn a worker with a drip-fed packet that omits checks and return requirements.",
+      "state": {"children": [{"id":"prior-l1","role":"explorer","status":"succeeded","writer":false,"acceptance_relevant":false,"scope":["prior"]}]},
+      "action": {"actor":"primary","kind":"spawn_worker","scope":["candidate"],"packet":{"coherent_implementation":true,"checks":false,"structured_return":false}},
+      "expected": {"decision":"deny","reason_code":"worker_packet_incomplete","terminal_barrier":false},
+      "expected_outcome": "Reject a worker spawn until one packet contains the coherent implementation, checks, and return."
+    },
+    {
+      "id": "worker_complete_packet_allowed",
+      "scenario": "Sol supplies the whole coherent implementation, checks, and return in the initial worker packet.",
+      "state": {"children": [{"id":"prior-l2","role":"explorer","status":"succeeded","writer":false,"acceptance_relevant":false,"scope":["prior"]}]},
+      "action": {"actor":"primary","kind":"spawn_worker","scope":["candidate"],"packet":{"coherent_implementation":true,"checks":true,"structured_return":true}},
+      "expected": {"decision":"allow","reason_code":"worker_packet_complete","terminal_barrier":false},
+      "expected_outcome": "Allow one decision-complete worker packet."
+    },
+    {
+      "id": "tester_before_final_candidate_denied",
+      "scenario": "Sol attempts acceptance testing before the candidate is final.",
+      "state": {"final_candidate":false,"children":[{"id":"prior-l3","role":"explorer","status":"succeeded","writer":false,"acceptance_relevant":false,"scope":["prior"]}]},
+      "action": {"actor":"primary","kind":"start_tester","scope":["candidate"],"candidate_id":"candidate-1","tester_id":"tester-1","batched_acceptance_packet":true},
+      "expected": {"decision":"deny","reason_code":"tester_requires_final_candidate","terminal_barrier":false},
+      "expected_outcome": "Reject tester work before the final candidate."
+    },
+    {
+      "id": "tester_first_batched_final_allowed",
+      "scenario": "The final candidate receives its first batched acceptance packet.",
+      "state": {"final_candidate":true,"tester_runs":[],"children":[{"id":"worker-l4","role":"worker","status":"succeeded","writer":true,"acceptance_relevant":false,"scope":["candidate"]}]},
+      "action": {"actor":"primary","kind":"start_tester","scope":["candidate"],"candidate_id":"candidate-1","tester_id":"tester-1","batched_acceptance_packet":true},
+      "expected": {"decision":"allow","reason_code":"tester_first_batched_run","terminal_barrier":false},
+      "expected_outcome": "Allow the first batched tester run after the final candidate."
+    },
+    {
+      "id": "tester_identical_repeat_denied",
+      "scenario": "Sol repeats accepted tester checks without candidate drift or a precise evidence gap.",
+      "state": {"final_candidate":true,"tester_runs":[{"candidate_id":"candidate-1","tester_id":"tester-1"}],"children":[{"id":"tester-l5","role":"tester","status":"succeeded","writer":false,"acceptance_relevant":false,"scope":["candidate"]}]},
+      "action": {"actor":"primary","kind":"start_tester","scope":["candidate"],"candidate_id":"candidate-1","tester_id":"tester-1","batched_acceptance_packet":true,"code_config_drift":false,"precise_evidence_gap":""},
+      "expected": {"decision":"deny","reason_code":"identical_tester_repeat_denied","terminal_barrier":false},
+      "expected_outcome": "Reject an identical accepted tester rerun."
+    },
+    {
+      "id": "tester_same_child_drift_correction_allowed",
+      "scenario": "Code or configuration drift authorizes the same tester to rerun the affected acceptance evidence.",
+      "state": {"final_candidate":true,"tester_runs":[{"candidate_id":"candidate-1","tester_id":"tester-1"}],"children":[{"id":"tester-l6","role":"tester","status":"succeeded","writer":false,"acceptance_relevant":false,"scope":["candidate"]}]},
+      "action": {"actor":"primary","kind":"start_tester","scope":["candidate"],"candidate_id":"candidate-1","tester_id":"tester-1","batched_acceptance_packet":true,"code_config_drift":true},
+      "expected": {"decision":"allow","reason_code":"same_tester_correction_authorized","terminal_barrier":false},
+      "expected_outcome": "Allow the same tester after code or configuration drift."
+    },
+    {
+      "id": "tester_same_child_evidence_gap_allowed",
+      "scenario": "A precise evidence gap authorizes a targeted correction by the same tester.",
+      "state": {"final_candidate":true,"tester_runs":[{"candidate_id":"candidate-1","tester_id":"tester-1"}],"children":[{"id":"tester-l7","role":"tester","status":"succeeded","writer":false,"acceptance_relevant":false,"scope":["candidate"]}]},
+      "action": {"actor":"primary","kind":"start_tester","scope":["candidate"],"candidate_id":"candidate-1","tester_id":"tester-1","batched_acceptance_packet":true,"precise_evidence_gap":"missing network assertion"},
+      "expected": {"decision":"allow","reason_code":"same_tester_correction_authorized","terminal_barrier":false},
+      "expected_outcome": "Allow a precise evidence-gap correction by the same tester."
+    },
+    {
+      "id": "reviewer_before_final_candidate_denied",
+      "scenario": "Sol attempts independent review before the candidate is final.",
+      "state": {"final_candidate":false,"children":[{"id":"prior-l8","role":"explorer","status":"succeeded","writer":false,"acceptance_relevant":false,"scope":["prior"]}]},
+      "action": {"actor":"primary","kind":"start_reviewer","scope":["candidate"],"candidate_id":"candidate-1","reviewer_id":"reviewer-1","admission":"high-risk"},
+      "expected": {"decision":"deny","reason_code":"reviewer_requires_final_candidate","terminal_barrier":false},
+      "expected_outcome": "Reject review before the final candidate."
+    },
+    {
+      "id": "tester_final_candidate_active_worker_waits",
+      "scenario": "A final-candidate label cannot bypass an active acceptance-relevant worker before tester admission.",
+      "state": {"final_candidate":true,"tester_runs":[],"children":[{"id":"worker-safety-1","role":"worker","status":"active","writer":true,"acceptance_relevant":true,"scope":["candidate"]}]},
+      "action": {"actor":"primary","kind":"start_tester","scope":["candidate"],"candidate_id":"candidate-safety","tester_id":"tester-safety","batched_acceptance_packet":true},
+      "expected": {"decision":"wait","reason_code":"acceptance_predecessor_nonterminal","terminal_barrier":true},
+      "expected_outcome": "The terminal barrier blocks tester admission before latency policy is evaluated."
+    },
+    {
+      "id": "reviewer_final_candidate_active_worker_waits",
+      "scenario": "A final-candidate label cannot bypass an active acceptance-relevant worker before reviewer admission.",
+      "state": {"final_candidate":true,"reviewer_runs":[],"children":[{"id":"worker-safety-2","role":"worker","status":"active","writer":true,"acceptance_relevant":true,"scope":["candidate"]}]},
+      "action": {"actor":"primary","kind":"start_reviewer","scope":["candidate"],"candidate_id":"candidate-safety","reviewer_id":"reviewer-safety","admission":"high-risk"},
+      "expected": {"decision":"wait","reason_code":"predecessor_nonterminal","terminal_barrier":true},
+      "expected_outcome": "The terminal barrier blocks reviewer admission before latency policy is evaluated."
+    },
+    {
+      "id": "worker_complete_packet_active_writer_denied",
+      "scenario": "A complete worker packet cannot bypass an existing active writer in the shared worktree.",
+      "state": {"children":[{"id":"writer-safety-1","role":"tester","status":"active","writer":true,"acceptance_relevant":false,"scope":["other"]}]},
+      "action": {"actor":"primary","kind":"spawn_worker","scope":["candidate"],"packet":{"coherent_implementation":true,"checks":true,"structured_return":true}},
+      "expected": {"decision":"deny","reason_code":"shared_worktree_writer_collision","terminal_barrier":false},
+      "expected_outcome": "The one-writer invariant blocks worker admission before packet latency policy is evaluated."
+    },
+    {
+      "id": "worker_complete_packet_active_predecessor_waits",
+      "scenario": "A complete worker packet cannot bypass an active acceptance-relevant non-writer predecessor.",
+      "state": {"children":[{"id":"explorer-safety-3","role":"explorer","status":"active","writer":false,"acceptance_relevant":true,"scope":["candidate-recon"]}]},
+      "action": {"actor":"primary","kind":"spawn_worker","scope":["candidate"],"packet":{"coherent_implementation":true,"checks":true,"structured_return":true}},
+      "expected": {"decision":"wait","reason_code":"acceptance_predecessor_nonterminal","terminal_barrier":true},
+      "expected_outcome": "The terminal barrier blocks worker admission before packet latency policy is evaluated."
+    },
+    {
+      "id": "second_logical_reviewer_denied",
+      "scenario": "A second logical reviewer is proposed for the same final candidate.",
+      "state": {"final_candidate":true,"reviewer_runs":[{"candidate_id":"candidate-1","reviewer_id":"reviewer-1"}],"children":[{"id":"reviewer-l9","role":"reviewer","status":"succeeded","acceptance_relevant":false,"scope":["candidate"]}]},
+      "action": {"actor":"primary","kind":"start_reviewer","scope":["candidate"],"candidate_id":"candidate-1","reviewer_id":"reviewer-2","admission":"high-risk"},
+      "expected": {"decision":"deny","reason_code":"second_logical_reviewer_denied","terminal_barrier":false},
+      "expected_outcome": "Reject a replacement reviewer for the same candidate."
+    },
+    {
+      "id": "same_reviewer_targeted_correction_allowed",
+      "scenario": "The same reviewer receives a targeted correction for a precise evidence gap.",
+      "state": {"final_candidate":true,"reviewer_runs":[{"candidate_id":"candidate-1","reviewer_id":"reviewer-1"}],"children":[{"id":"reviewer-l10","role":"reviewer","status":"succeeded","acceptance_relevant":false,"scope":["candidate"]}]},
+      "action": {"actor":"primary","kind":"start_reviewer","scope":["candidate"],"candidate_id":"candidate-1","reviewer_id":"reviewer-1","admission":"high-risk","precise_evidence_gap":"verify inspector omission semantics"},
+      "expected": {"decision":"allow","reason_code":"same_reviewer_targeted_correction","terminal_barrier":false},
+      "expected_outcome": "Allow a targeted correction by the same logical reviewer."
     }
   ],
   "adversarial_mutations": [
@@ -656,6 +776,15 @@
     {"id": "handoff_config_runtime_empty_object_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.config_runtime": {}}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
     {"id": "handoff_contracts_empty_string_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.contracts": ""}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
     {"id": "handoff_contradiction_none_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.contradiction": null}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
-    {"id": "handoff_path_known_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.path_known": {}}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}}
+    {"id": "handoff_path_known_wrong_type_rejected", "base_case": "resolved_handoff_evidence_reuse", "state_patch": {"handoffs.0.path_known": {}}, "action_patch": {}, "expected": {"decision": "invalidate", "reason_code": "evidence_handoff_snapshot_malformed", "terminal_barrier": false}},
+    {"id":"worker_packet_completed_allows_spawn","base_case":"worker_incomplete_packet_denied","state_patch":{},"action_patch":{"packet.checks":true,"packet.structured_return":true},"expected":{"decision":"allow","reason_code":"worker_packet_complete","terminal_barrier":false}},
+    {"id":"final_candidate_allows_first_tester","base_case":"tester_before_final_candidate_denied","state_patch":{"final_candidate":true},"action_patch":{},"expected":{"decision":"allow","reason_code":"tester_first_batched_run","terminal_barrier":false}},
+    {"id":"precise_gap_allows_same_tester","base_case":"tester_identical_repeat_denied","state_patch":{},"action_patch":{"precise_evidence_gap":"missing response assertion"},"expected":{"decision":"allow","reason_code":"same_tester_correction_authorized","terminal_barrier":false}},
+    {"id":"same_reviewer_targeted_not_replacement","base_case":"second_logical_reviewer_denied","state_patch":{},"action_patch":{"reviewer_id":"reviewer-1","precise_evidence_gap":"missing route evidence"},"expected":{"decision":"allow","reason_code":"same_reviewer_targeted_correction","terminal_barrier":false}},
+    {"id":"untargeted_same_reviewer_repeat_denied","base_case":"same_reviewer_targeted_correction_allowed","state_patch":{},"action_patch":{"precise_evidence_gap":""},"expected":{"decision":"deny","reason_code":"second_logical_reviewer_denied","terminal_barrier":false}},
+    {"id":"tester_predecessor_cleared_allows_latency","base_case":"tester_final_candidate_active_worker_waits","state_patch":{"children.0.acceptance_relevant":false},"action_patch":{},"expected":{"decision":"allow","reason_code":"tester_first_batched_run","terminal_barrier":false}},
+    {"id":"reviewer_predecessor_cleared_allows_latency","base_case":"reviewer_final_candidate_active_worker_waits","state_patch":{"children.0.acceptance_relevant":false},"action_patch":{},"expected":{"decision":"allow","reason_code":"reviewer_first_logical_run","terminal_barrier":false}},
+    {"id":"active_writer_terminal_allows_worker_latency","base_case":"worker_complete_packet_active_writer_denied","state_patch":{"children.0.status":"succeeded"},"action_patch":{},"expected":{"decision":"allow","reason_code":"worker_packet_complete","terminal_barrier":false}},
+    {"id":"worker_predecessor_made_nonrelevant_allows_latency","base_case":"worker_complete_packet_active_predecessor_waits","state_patch":{"children.0.acceptance_relevant":false},"action_patch":{},"expected":{"decision":"allow","reason_code":"worker_packet_complete","terminal_barrier":false}}
   ]
 }

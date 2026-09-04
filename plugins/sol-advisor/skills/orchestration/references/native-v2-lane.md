@@ -1,4 +1,4 @@
-# Native Luna V2 lane
+# Native mixed Sol V2 lane
 
 This is the normative default workflow for Sol Advisor. Legacy Terra/Sol and app-task
 paths are compatibility lanes, not this default. The native lane uses the host's native
@@ -8,18 +8,30 @@ other app-task tools, and it does not install or remove custom-agent TOMLs.
 
 ## Runtime contract
 
-The available role names are `deep_explorer`, `explorer`, `worker`, `tester`, and
-`reviewer`. The primary explicitly requests `gpt-5.6-luna` with `max` effort. Role
+The available logical roles are `deep_explorer`, `explorer`, `worker`, `tester`, and
+`reviewer`. Explorer uses carrier `default` with Sol/low; deep_explorer and worker use
+carrier `default` with Sol/medium; reviewer uses carrier `default` with Sol/medium or
+Sol/high for `critical-risk`; tester uses native carrier `tester` with Luna/max. Carrier,
+logical role, route class, model, effort, and `fork_turns=none` must match exactly. Role
 availability and spawn acceptance of that explicit route are hard prerequisites. If
 public spawn or rollout metadata explicitly conflicts or shows a fallback, stop; if
 accepted metadata omits model or effort, record an `unobservable` warning and continue
-ordinary work when no conflict evidence exists. There is no silent fallback. `priority`
-has the same warning semantics when omitted. The primary model and effort are
-informational and are not a hard stop.
+ordinary work when no conflict evidence exists. There is no silent fallback. Sol routes
+never request fast mode or priority service tier; explicit `fast_mode=true` or
+`service_tier=priority` blocks. Missing model/effort/fast/service-tier metadata is `unobservable`, not
+proof it is disabled. Tester priority remains observable only when unavoidable. The primary
+model and effort are informational and are not a hard stop.
+Packet logical role/route class are expected intent, emitted separately from observed host metadata; absent
+`observed_logical_role` or `observed_route_class` is `unobservable` and never filled from the request.
+An exact user request for a Luna worker or explorer is an explicit compatibility-route override and an activation fixture, not evidence of the default route.
+The concrete spawn carrier fields are `agent_type=default` for Sol routes and `agent_type=tester` for tester.
+Exact matrix: `explorer=default/gpt-5.6-sol/low/normal`; `deep_explorer=default/gpt-5.6-sol/medium/normal`;
+`worker=default/gpt-5.6-sol/medium/normal`; `reviewer.normal=default/gpt-5.6-sol/medium/normal`;
+`reviewer.critical-risk=default/gpt-5.6-sol/high/critical-risk`; `tester=tester/gpt-5.6-luna/max/normal`.
 
 The primary uses one selected role from this set; choose the smallest role that fits the request.
 Sol keeps intent, architecture/contracts, authorization, risk/rollback, irreversible scope,
-option selection, integration, residual-risk acceptance, and final acceptance. Luna receives an
+option selection, integration, residual-risk acceptance, and final acceptance. A delegated child receives an
 exact Sol-owned question for bounded evidence or a decision-complete execution packet. Judge
 delegation at a coherent write phase: the related repository mutations needed for the next
 independently acceptable candidate state. `worker` is the default for a decision-complete
@@ -104,7 +116,9 @@ decision-complete; an evidence-only role may investigate an exact unresolved Sol
 Unresolved or contradictory execution judgment returns to Sol. Current user scope or exact tool
 choice may narrow project defaults; project rules cannot reopen an explicitly excluded path.
 
-Browser/runtime QA routes to one tester end to end. An exact current-turn user-selected browser tool
+Browser/runtime QA routes to one tester end to end. Send one batched acceptance packet only after the final candidate;
+rerun or correct the same tester only for code/config drift or a precise evidence gap, never identical accepted checks.
+An exact current-turn user-selected browser tool
 always wins and is preflighted on its own; never silently fall back away from that selection. For default or
 generic “browser plugin” QA, probe actual capability rather than infer from OS labels and record the `selected route`, availability,
 and fallback reason before dispatch. Use this ordered ladder: (1) durable `$chrome:control-chrome`
@@ -132,17 +146,20 @@ waits for every acceptance-relevant predecessor child to be terminal. Sol then i
 and its artifacts. `failed`, `blocked`, or an authorized interruption is terminal only after that disposition is recorded;
 missing required evidence cannot be silently waived, and ACCEPT never consumes partial output.
 
-Build a compact packet from the [role-contracts.md](role-contracts.md) schema, including the active-child ownership
+Build one compact whole-phase packet from the [role-contracts.md](role-contracts.md) schema, including the active-child ownership
 ledger before spawn. State `fork_turns: none`, exact owned files,
 interfaces, constraints, verification commands, and a structured return. Do not copy
-the entire conversation, prompt history, or full diff.
+the entire conversation, prompt history, or full diff. The initial worker packet contains the coherent implementation,
+checks, and return; do not drip-feed mechanical follow-ups.
 
 The spawn shape is:
 
 ```text
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
-model=gpt-5.6-luna
-reasoning_effort=max
+carrier_agent_type=<default|tester>
+logical_role=<deep_explorer|explorer|worker|tester|reviewer>
+route_class=<normal|critical-risk>
+model=<gpt-5.6-sol|gpt-5.6-luna>
+reasoning_effort=<low|medium|high|max>
 fork_turns=none
 ```
 
@@ -151,18 +168,17 @@ The compact task packet and reviewer return schema are defined in `role-contract
 ### PREFLIGHT
 
 Inspect the native tool's actual role surface and prepare the explicit route fields.
-Require the exact role and an accepted spawn request with `model=gpt-5.6-luna`,
-`reasoning_effort=max`, and `fork_turns=none`; stop if the role is unavailable or the
+Require the exact carrier/logical role/class/model/effort and `fork_turns=none`; stop if the carrier is unavailable or the
 spawn rejects the request. If accepted public metadata or rollout evidence conflicts or
 shows a fallback, stop; if fields are omitted, emit an `unobservable` warning rather
-than blocking an ordinary task. Capture `priority` when exposed, otherwise warn. Confirm
+than blocking an ordinary task. For Sol routes, never request fast mode or priority service tier;
+block explicit fast/priority metadata and report missing fields as unobservable. Confirm
 the shared-worktree writer slot is free.
 
 ### SPAWN
 
-Call `spawn_agent` with the selected `agent_type`, `model=gpt-5.6-luna`,
-`reasoning_effort=max`, and `fork_turns=none`. This explicit route is intentional, not a
-fallback. Do not use an app task, nested CLI, or legacy Terra/Sol role in this lane.
+Call `spawn_agent` with the resolved carrier, model, effort, and `fork_turns=none`; put the logical role and route class
+in the packet. This explicit route is intentional, not a fallback. Do not use an app task, nested CLI, or legacy Terra/Sol role.
 
 ### MONITOR
 
@@ -209,8 +225,10 @@ no forbidden external mutation or secret handling occurred.
 ### REVIEW (optional)
 
 Review is a dependent phase: it waits for every acceptance-relevant predecessor to reach terminal state and for Sol to
-inspect/disposition each handoff before starting. Default to at most one reviewer; a second reviewer needs a distinct
-named risk axis and an explicit reason.
+inspect/disposition each handoff before starting. Use a reviewer only for high risk or explicit request, after the final
+candidate, with at most one logical reviewer per candidate. Targeted same-child corrections do not count as replacements.
+The coordination evaluator enforces the worker packet and tester/reviewer candidate-state gates.
+Terminal-barrier and one-writer invariants run before those latency gates.
 
 For high-risk changes or an explicit review request, spawn `reviewer` with a fresh
 `fork_turns: none` packet and require the reviewer return schema from `role-contracts.md`.

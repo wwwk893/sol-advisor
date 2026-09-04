@@ -1,8 +1,7 @@
-# Native Luna V2 role contracts
+# Native mixed Sol V2 role contracts
 
 This document is the contract for the default native subagent V2 lane. The primary
-selects one of five native roles and explicitly requests `gpt-5.6-luna` with `max`
-effort.
+selects one of five logical roles and requests its exact carrier/model/effort route.
 The user-visible app-task Luna lane and the legacy Terra/Sol TOMLs are explicit
 compatibility paths; they are not represented by these contracts.
 
@@ -10,25 +9,38 @@ compatibility paths; they are not represented by these contracts.
 
 Before a spawn, the primary must establish:
 
-1. the requested role is available in the native `spawn_agent` surface;
-2. the request includes `model=gpt-5.6-luna`, `reasoning_effort=max`, and
-   `fork_turns=none`; and
+1. the requested carrier is available in the native `spawn_agent` surface;
+2. the request includes the exact carrier/model/effort route and `fork_turns=none`; and
 3. the spawn accepts that explicit route.
 
-Role availability and spawn acceptance of the explicit Luna/max request are hard prerequisites
+Carrier availability and spawn acceptance of the explicit request are hard prerequisites
 (hard gates for the delegation). If public spawn or rollout metadata
 explicitly conflicts or shows a fallback, stop the affected delegation. If accepted
 metadata omits model or effort,
 record an `unobservable` warning and continue an ordinary task when there is no
 conflict evidence. There is no silent fallback to another role, model, or effort.
-`priority` has the same warning semantics when it is omitted. The primary model and
-effort are not hard gates for using this skill.
+Sol routes never request fast mode or priority service tier. Explicit `fast_mode=true` or
+`service_tier=priority` is a route conflict and blocks before work. Missing model/effort/fast/service-tier
+metadata is `unobservable`, not proof it is disabled. Tester keeps existing priority observability
+semantics only when unavoidable. The primary model and effort are not hard gates for using this skill.
+Packet logical role and route class are expected request intent. Report them as `expected_logical_role` and
+`expected_route_class`; report `observed_logical_role` and `observed_route_class` as `unobservable` unless host metadata supplies them.
+An exact user request for a Luna worker or explorer is an explicit compatibility-route override and an activation fixture, not evidence of the default route.
+
+Exact routes: explorer uses carrier `default`, logical role `explorer`, class `normal`, Sol/low;
+deep_explorer uses `default`, `deep_explorer`, `normal`, Sol/medium; worker uses `default`, `worker`,
+`normal`, Sol/medium; reviewer uses `default`, `reviewer`, `normal`, Sol/medium or `critical-risk`,
+Sol/high; tester uses native carrier `tester`, logical role `tester`, `normal`, Luna/max. All use `fork_turns=none`.
+The concrete spawn carrier fields are `agent_type=default` for Sol routes and `agent_type=tester` for tester.
+Exact matrix: `explorer=default/gpt-5.6-sol/low/normal`; `deep_explorer=default/gpt-5.6-sol/medium/normal`;
+`worker=default/gpt-5.6-sol/medium/normal`; `reviewer.normal=default/gpt-5.6-sol/medium/normal`;
+`reviewer.critical-risk=default/gpt-5.6-sol/high/critical-risk`; `tester=tester/gpt-5.6-luna/max/normal`.
 
 ## Cognitive decision boundary
 
 Sol primary owns intent interpretation, product and architecture contracts, ownership,
 authorization, risk/rollback and irreversible scope, secret handling, option selection,
-final integration, residual-risk acceptance, and final acceptance. Luna roles gather bounded
+final integration, residual-risk acceptance, and final acceptance. Delegated roles gather bounded
 evidence under an exact Sol-owned question or execute a decision-complete packet; they do not make, accept, or
 silently widen those decisions. Explorers return evidence and options, reviewers return
 findings and a recommendation, and Sol makes the final choice.
@@ -43,7 +55,7 @@ a bounded non-overlapping spot-check is the only narrower exception. Sol must no
 the child is slow, quiet, or the worktree is temporarily unchanged. The shared worktree has one writer at a time.
 
 The ownership ledger is coordination metadata, not an implementation scheduler. It does not change the five native
-roles, their explicit Luna route, or the existing `priority`/`unobservable` semantics. A child handoff does not waive
+roles, their explicit route, or the `unobservable` semantics. A child handoff does not waive
 the lock: the primary inspects the actual artifacts and sends a targeted correction to the same child when evidence is
 missing or contradictory.
 
@@ -53,8 +65,9 @@ An assigned child may continue only actions covered by its role: `explorer` and 
 `worker` performs its owned write, test, config, and dependency actions with explicit `writer: true` for writes; `tester`
 performs runtime/browser/test actions and product repair only with `writer: true` plus explicit repair authorization;
 `reviewer` performs review only. `reuse_evidence`, `wait_agent`-style monitoring, dependent phase control, ACCEPT, and
-interrupt remain primary-only. The evaluator in `scripts/evaluate_coordination.py` computes these transitions from the
-shared `evals/coordination_cases.json` fixture; it is contract evidence, not runtime scheduling or enforcement.
+interrupt remain primary-only. The evaluator in `scripts/evaluate_coordination.py` computes these transitions and the
+worker/tester/reviewer latency state/action gates from `evals/coordination_cases.json`; it is contract evidence, not runtime scheduling.
+Terminal-barrier and shared-worktree one-writer invariants are evaluated before any latency admission result.
 
 ## Terminal coordination barrier
 
@@ -80,8 +93,9 @@ and contracts are unchanged. Any such drift, a contradiction, or an unresolved p
 requires fresh RECON or a targeted correction to the same child; do not spawn an explorer merely to repeat sufficient
 evidence. The worker owns tracked tests, configuration, and dependencies in its coherent write phase. One tester owns
 browser/runtime QA end to end. After predecessor children are terminal, Sol runs only the narrowest local non-browser
-acceptance subset. Default to at most one reviewer; a second reviewer requires a distinct named risk axis and an explicit
-reason. Shared-worktree one-writer and correction-in-place rules remain in force.
+acceptance subset. Reviewer is used only for high risk or an explicit request, after the final candidate, and there is at most
+one logical reviewer per candidate. Targeted corrections to that same reviewer do not count as replacements. Shared-worktree
+one-writer and correction-in-place rules remain in force.
 
 ## Proactive reconnaissance boundary
 
@@ -146,7 +160,8 @@ not a narrative dump or an implementation decision.
 
 ### `worker`
 
-Use for a decision-complete settled implementation with an exact owned file set. It is the sole writer
+Use for a decision-complete settled implementation with an exact owned file set. Its initial packet contains the whole
+coherent implementation, checks, and structured return; never drip-feed mechanical follow-ups. It is the sole writer
 for those files in a shared worktree and is the default product writer. It preserves unrelated
 edits, runs the requested focused checks, and reports actual changed files and evidence. It may
 choose local implementation details inside the settled contract, but returns `blocked` rather
@@ -187,7 +202,9 @@ to perform it. Authentication is bounded to the repository-declared test credent
 and only after the primary records the target as non-production and keeps authorization in
 scope. Never expose credential values or inspect stored browser passwords, cookies, local storage, or session storage.
 
-For browser/runtime QA, one Luna Max tester owns the session end to end. An exact user-selected
+For browser/runtime QA, one native Luna Max tester owns the session end to end. It receives one batched acceptance packet only
+after the final candidate. Rerun or correct that same tester only after code/config drift or a precise evidence gap; never repeat
+identical accepted checks. An exact user-selected
 browser tool always wins and is preflighted on its own; never silently fall back from that choice.
 For default or generic “browser plugin” QA, probe actual capability rather than infer from OS labels and record the `selected route`,
 availability, and fallback reason before dispatch. Use this ordered ladder: (1) durable
@@ -224,6 +241,10 @@ requirement alone is not a blocker.
 ### `reviewer`
 
 Use only for a high-risk boundary or an explicit user request for independent review.
+Run it only after the final candidate. Use class `normal` with Sol/medium or `critical-risk` with Sol/high for production
+authentication/access-control, security-sensitive privilege boundaries, irreversible changes, credible data-loss risk,
+or another named high-consequence risk. Use at most one logical reviewer per candidate; targeted corrections stay with
+that same child and do not count as a replacement reviewer.
 It is behaviorally read-only and uses the reviewer RETURN schema in the compact packet. It must
 not implement its own fix or accept residual risk; its verdict is a recommendation for Sol.
 
@@ -242,14 +263,17 @@ copy. Replace every placeholder before spawning:
 
 ```text
 ROLE
-Act as the <deep_explorer|explorer|worker|tester|reviewer> in Sol Advisor's native
-Luna V2 lane.
+Act as the logical <deep_explorer|explorer|worker|tester|reviewer> in Sol Advisor's native V2 lane.
 
 ROUTE
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
-model=gpt-5.6-luna
-reasoning_effort=max
+carrier_agent_type=<default|tester>
+logical_role=<deep_explorer|explorer|worker|tester|reviewer>
+route_class=<normal|critical-risk>
+model=<gpt-5.6-sol|gpt-5.6-luna>
+reasoning_effort=<low|medium|high|max>
 fork_turns=none
+fast_mode=not-requested
+service_tier=not-requested
 
 OBJECTIVE
 <Observable outcome and why it matters.>
@@ -371,9 +395,11 @@ SOL DECISION NEEDED:
 The primary invokes the native tool explicitly:
 
 ```text
-agent_type=<deep_explorer|explorer|worker|tester|reviewer>
-model=gpt-5.6-luna
-reasoning_effort=max
+carrier_agent_type=<default|tester>
+logical_role=<deep_explorer|explorer|worker|tester|reviewer>
+route_class=<normal|critical-risk>
+model=<gpt-5.6-sol|gpt-5.6-luna>
+reasoning_effort=<low|medium|high|max>
 fork_turns=none
 ```
 

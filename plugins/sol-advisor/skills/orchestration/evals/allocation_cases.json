@@ -159,7 +159,7 @@
       "decision_owner": "sol",
       "execution_route": "blocked",
       "luna_scope": "none",
-      "expected_outcome": "Return the contradiction to Sol; no Luna execution role invents the decision."
+      "expected_outcome": "Return the contradiction to Sol; no delegated execution role invents the decision."
     },
     {
       "id": "cross_repo_write_phase",

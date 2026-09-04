@@ -1,7 +1,7 @@
 interface:
   display_name: "Sol Advisor Orchestration"
-  short_description: "0.7.0 default routing: Sol owns judgment; native Luna V2 runs bounded work under scope locks and terminal barriers"
-  default_prompt: "Route through $sol-advisor:orchestration 0.7.0; keep judgment in Sol and bounded work in Luna Max."
+  short_description: "0.7.1 exact mixed Sol routing with latency, scope-lock, and terminal-barrier guardrails"
+  default_prompt: "Route through $sol-advisor:orchestration 0.7.1 with exact mixed Sol routing and latency guardrails."
 compatibility:
   canonical_format: "codex-plugin-skill"
   adapter_targets:
@@ -18,4 +18,4 @@ compatibility:
     remote_inline_execution: "forbid"
     remote_metadata_policy: "allow-metadata-only"
   degradation:
-    openai: "Native V2 is required by default in 0.7.0; app-task Luna and Terra/Sol are explicit compatibility lanes."
+    openai: "Native V2 is required by default in 0.7.1; compatibility lanes remain explicit opt-ins."

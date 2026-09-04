@@ -1,7 +1,7 @@
 # External specialist lane
 
 This lane covers an external runtime that produces a bounded artifact or independent evidence for
-Sol. It is not part of native Luna V2 and never adds another `agent_type`. Native Luna keeps exactly
+Sol. It is loaded only after this lane is admitted. It is not part of native V2 and never adds another `agent_type`. Native delegation keeps exactly
 `deep_explorer`, `explorer`, `worker`, `tester`, and `reviewer`.
 
 ## Admission
@@ -41,7 +41,7 @@ use an isolated project or scratch root and copy only the minimum reviewed conte
 
 Preflight the named provider/runtime/model/tool. If the exact route is unavailable, authentication
 fails, or public metadata conflicts with the requested route, return `blocked`. Never silently
-substitute another provider, model, local agent, native Luna role, or weaker permission mode.
+substitute another provider, model, local agent, native role, or weaker permission mode.
 Metadata that simply omits a requested field is `unobservable`; continue only when the active
 user-level contract explicitly permits that warning and there is no conflict evidence.
 
@@ -113,7 +113,7 @@ could make the before/after comparison ambiguous.
 
 Start exactly one logical run with a stable idempotency/request identifier when the runtime supports
 it. A lost response must not cause a duplicate run with a new identity. External commission tools are
-called by Sol; do not nest the external specialist inside a native Luna child merely to imitate another
+called by Sol; do not nest the external specialist inside a native child merely to imitate another
 native role.
 
 ### MONITOR
@@ -131,7 +131,7 @@ on unexpected mutation.
 ### CORRECT
 
 Send a targeted correction to the same logical specialist project/session when supported. The
-external correction counter is separate from native Luna correction rounds. Default to one targeted
+external correction counter is separate from native correction rounds. Default to one targeted
 correction and allow at most two unless the user explicitly directs continuation or there is clearly
 measurable progress; record `continuation_reason` and `user_direction` beyond the default.
 

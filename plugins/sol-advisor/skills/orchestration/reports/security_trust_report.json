@@ -5,7 +5,7 @@
   "plugin_shell_trust_report": "reports/plugin_shell_trust.md/.json",
   "skill_dir": "/root/.codex/.tmp/marketplaces/sol-advisor/plugins/sol-advisor/skills/orchestration",
   "summary": {
-    "scanned_files": 16,
+    "scanned_files": 17,
     "script_count": 1,
     "internal_module_count": 0,
     "secret_findings": 0,
@@ -23,8 +23,8 @@
     "help_smoke_failed_count": 0,
     "interactive_script_count": 0,
     "package_hash_scope": "source-contract-without-generated-reports",
-    "package_hash_file_count": 16,
-    "package_sha256": "9d413610f96840009f9c955ad247e2eebba84e251af34b9de92d06da1ec643db"
+    "package_hash_file_count": 17,
+    "package_sha256": "11a110b124e4dbfbf1a28584fe14dd223ed7d85b5397a5ddd1432fafca55c7c8"
   },
   "failures": [],
   "warnings": [
@@ -79,7 +79,7 @@
         "timed_out": false,
         "passed": true,
         "has_help_text": true,
-        "stdout_excerpt": "usage: evaluate_coordination.py [-h] [--json] [--self-test] fixture\n\nPure evaluator for the 0.7.0 coordination file-backed fixture. This computes\ninstruction-contract transitions from state and action data. It is evidence\nfor the contract, ",
+        "stdout_excerpt": "usage: evaluate_coordination.py [-h] [--json] [--self-test] fixture\n\nPure evaluator for the 0.7.1 coordination file-backed fixture. This computes\ninstruction-contract transitions from state and action data. It is evidence\nfor the contract, ",
         "stderr_excerpt": ""
       }
     ],

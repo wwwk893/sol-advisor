@@ -1,0 +1,18 @@
+{
+  "suite": "Sol Advisor 0.7.1 exact native routing holdout",
+  "fork_turns": "none",
+  "sol_route_policy": {
+    "fast_mode_request": "none",
+    "service_tier_request": "none",
+    "explicit_fast_or_priority": "block",
+    "missing_runtime_fields": "unobservable"
+  },
+  "cases": [
+    {"id":"bounded_subsystem_trace","carrier_agent_type":"default","logical_role":"explorer","route_class":"normal","model":"gpt-5.6-sol","reasoning_effort":"low"},
+    {"id":"cross_repo_architecture_trace","carrier_agent_type":"default","logical_role":"deep_explorer","route_class":"normal","model":"gpt-5.6-sol","reasoning_effort":"medium"},
+    {"id":"coherent_worker_phase","carrier_agent_type":"default","logical_role":"worker","route_class":"normal","model":"gpt-5.6-sol","reasoning_effort":"medium"},
+    {"id":"ordinary_independent_review","carrier_agent_type":"default","logical_role":"reviewer","route_class":"normal","model":"gpt-5.6-sol","reasoning_effort":"medium"},
+    {"id":"critical_risk_review","carrier_agent_type":"default","logical_role":"reviewer","route_class":"critical-risk","model":"gpt-5.6-sol","reasoning_effort":"high"},
+    {"id":"browser_runtime_tester","carrier_agent_type":"tester","logical_role":"tester","route_class":"normal","model":"gpt-5.6-luna","reasoning_effort":"max"}
+  ]
+}

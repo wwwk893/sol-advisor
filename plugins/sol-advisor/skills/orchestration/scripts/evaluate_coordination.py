@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pure evaluator for the 0.7.0 coordination file-backed fixture.
+"""Pure evaluator for the 0.7.1 coordination file-backed fixture.
 
 This computes instruction-contract transitions from state and action data.  It is
 evidence for the contract, not a runtime scheduler or enforcement mechanism.
@@ -52,7 +52,8 @@ ROLE_OWNERSHIP_KINDS = {
 ORTHOGONAL_KINDS = {"prep", "spot_check"}
 INTERRUPT_REASONS = {"user_stop", "safety_boundary", "evidence_supported_abandonment"}
 WAIT_KINDS = {"wait", "wait_agent"}
-PRIMARY_CONTROL_KINDS = DEPENDENT_KINDS | {"interrupt", "reuse_evidence"} | WAIT_KINDS
+LATENCY_KINDS = {"spawn_worker", "start_tester", "start_reviewer"}
+PRIMARY_CONTROL_KINDS = DEPENDENT_KINDS | LATENCY_KINDS | {"interrupt", "reuse_evidence"} | WAIT_KINDS
 ROLE_ACTION_KINDS = {
     "deep_explorer": {"evidence_search", "recon"},
     "explorer": {"evidence_search", "recon"},
@@ -145,6 +146,63 @@ def _inspectable_terminal(child: dict[str, Any]) -> bool:
 
 def _valid_round(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _latency_guardrail_result(state: dict[str, Any], action: dict[str, Any]) -> dict[str, Any] | None:
+    """Evaluate packet batching and final-candidate admission without scheduling work."""
+    kind = action.get("kind")
+    if kind == "spawn_worker":
+        packet = action.get("packet")
+        complete = isinstance(packet, dict) and all(
+            packet.get(field) is True
+            for field in ("coherent_implementation", "checks", "structured_return")
+        )
+        return _result("allow", "worker_packet_complete") if complete else _result("deny", "worker_packet_incomplete")
+
+    if kind == "start_tester":
+        if state.get("final_candidate") is not True:
+            return _result("deny", "tester_requires_final_candidate")
+        if action.get("batched_acceptance_packet") is not True:
+            return _result("deny", "tester_packet_not_batched")
+        candidate_id = action.get("candidate_id")
+        tester_id = action.get("tester_id")
+        if not all(isinstance(value, str) and value.strip() for value in (candidate_id, tester_id)):
+            return _result("deny", "tester_identity_invalid")
+        runs = [
+            run for run in state.get("tester_runs", [])
+            if isinstance(run, dict) and run.get("candidate_id") == candidate_id
+        ]
+        if not runs:
+            return _result("allow", "tester_first_batched_run")
+        if any(run.get("tester_id") != tester_id for run in runs):
+            return _result("deny", "tester_replacement_denied")
+        precise_gap = action.get("precise_evidence_gap")
+        has_gap = isinstance(precise_gap, str) and bool(precise_gap.strip())
+        if action.get("code_config_drift") is True or has_gap:
+            return _result("allow", "same_tester_correction_authorized")
+        return _result("deny", "identical_tester_repeat_denied")
+
+    if kind == "start_reviewer":
+        if state.get("final_candidate") is not True:
+            return _result("deny", "reviewer_requires_final_candidate")
+        if action.get("admission") not in {"high-risk", "explicit"}:
+            return _result("deny", "reviewer_not_admitted")
+        candidate_id = action.get("candidate_id")
+        reviewer_id = action.get("reviewer_id")
+        if not all(isinstance(value, str) and value.strip() for value in (candidate_id, reviewer_id)):
+            return _result("deny", "reviewer_identity_invalid")
+        runs = [
+            run for run in state.get("reviewer_runs", [])
+            if isinstance(run, dict) and run.get("candidate_id") == candidate_id
+        ]
+        if not runs:
+            return _result("allow", "reviewer_first_logical_run")
+        precise_gap = action.get("precise_evidence_gap")
+        targeted = isinstance(precise_gap, str) and bool(precise_gap.strip())
+        if targeted and all(run.get("reviewer_id") == reviewer_id for run in runs):
+            return _result("allow", "same_reviewer_targeted_correction")
+        return _result("deny", "second_logical_reviewer_denied")
+    return None
 
 
 def _tester_repair_error(
@@ -265,7 +323,7 @@ def _terminal_barrier_result(children: list[dict[str, Any]], kind: str) -> dict[
     )
     nonterminal = [child for child in checked if child.get("status") not in TERMINAL]
     if nonterminal:
-        reason = "predecessor_nonterminal" if kind == "start_dependent_review" else "acceptance_predecessor_nonterminal"
+        reason = "predecessor_nonterminal" if kind in {"start_dependent_review", "start_reviewer"} else "acceptance_predecessor_nonterminal"
         return _result("wait", reason, True)
     failed = [child for child in checked if child.get("status") in {"failed", "blocked", "interrupted"}]
     for child in failed:
@@ -293,6 +351,17 @@ def _terminal_barrier_result(children: list[dict[str, Any]], kind: str) -> dict[
     if missing_evidence:
         return _result("wait", "required_evidence_unresolved", True)
     return _result("allow", "predecessors_terminal", True)
+
+
+def _writer_collision_result(
+    active_children: list[dict[str, Any]], kind: str
+) -> dict[str, Any] | None:
+    """Keep the shared-worktree one-writer invariant in one place."""
+    if kind not in WRITE_KINDS | {"spawn_worker"}:
+        return None
+    if any(child.get("writer") is True for child in active_children):
+        return _result("deny", "shared_worktree_writer_collision")
+    return None
 
 
 def _actor_child(
@@ -339,6 +408,22 @@ def evaluate(state: dict[str, Any], action: dict[str, Any]) -> dict[str, Any]:
         if actor != "primary":
             return _result("deny", "primary_only_action")
 
+    # Global safety invariants precede latency admission. A final-candidate
+    # label or complete packet must never bypass a predecessor or writer lock.
+    barrier_kinds = DEPENDENT_KINDS | {"spawn_worker", "start_tester", "start_reviewer"}
+    if kind in barrier_kinds:
+        barrier = _terminal_barrier_result(children, kind)
+        if kind in DEPENDENT_KINDS or barrier["decision"] != "allow":
+            return barrier
+    if kind == "spawn_worker":
+        writer_collision = _writer_collision_result(active_children, kind)
+        if writer_collision is not None:
+            return writer_collision
+
+    latency_result = _latency_guardrail_result(state, action)
+    if latency_result is not None:
+        return latency_result
+
     # While any child is active, every substantive primary action needs a
     # directional entry in the ownership ledger.  Control/monitoring actions
     # above are primary-owned and intentionally bypass this scope gate.
@@ -362,11 +447,6 @@ def evaluate(state: dict[str, Any], action: dict[str, Any]) -> dict[str, Any]:
                 repair_error = _tester_repair_error(assigned_child, action, action_scope)
                 if repair_error is not None:
                     return _result("deny", repair_error)
-
-    if kind in DEPENDENT_KINDS:
-        barrier = _terminal_barrier_result(children, kind)
-        if barrier is not None:
-            return barrier
 
     if kind == "reuse_evidence":
         current = state.get("evidence")
@@ -429,15 +509,10 @@ def evaluate(state: dict[str, Any], action: dict[str, Any]) -> dict[str, Any]:
             return _result("deny", f"active_{owner}_owns_{kind}_scope")
         return _result("deny", "active_child_scope_overlap")
 
-    # One shared worktree has one writer.  A non-overlapping scope is still a
-    # collision when another active child has writer ownership.
-    active_writers = [
-        child
-        for child in active_children
-        if child.get("writer") is True
-    ]
-    if kind in WRITE_KINDS and active_writers:
-        return _result("deny", "shared_worktree_writer_collision")
+    # One shared worktree has one writer even when scopes do not overlap.
+    writer_collision = _writer_collision_result(active_children, kind)
+    if writer_collision is not None:
+        return writer_collision
 
     return _result("allow", "own_child_continuation" if assigned_child is not None else "scope_available")
 

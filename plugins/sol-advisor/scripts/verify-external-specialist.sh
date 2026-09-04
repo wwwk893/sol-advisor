@@ -39,14 +39,14 @@ lane = lane_path.read_text(encoding="utf-8")
 cases = json.loads(cases_path.read_text(encoding="utf-8"))
 allocation = json.loads(allocation_path.read_text(encoding="utf-8"))
 
-if "references/external-specialist-lane.md" not in skill:
-    raise SystemExit("SKILL does not load the external specialist lane")
+if "Load references/external-specialist-lane.md only when that lane is admitted" not in skill:
+    raise SystemExit("SKILL does not conditionally load the external specialist lane")
 
 required_skill_tokens = (
     "not a sixth native role",
     "no production source ownership",
     "no silent fallback",
-    "accept it before issuing a Luna `worker` packet",
+    "accept an admitted artifact before issuing a native `worker` packet",
 )
 for token in required_skill_tokens:
     if token not in skill:
@@ -91,7 +91,7 @@ expected = {
         "text": "The rendered design artifact and implementation handoff are accepted; implement the named production files and focused tests.",
         "decision_owner": "sol",
         "route": "worker",
-        "expected_outcome": "A native Luna worker owns production implementation; the external specialist receives no production source ownership.",
+        "expected_outcome": "A native worker owns production implementation; the external specialist receives no production source ownership.",
     },
     "exact_external_route_unavailable": {
         "text": "The user requires one exact external runtime and model, but that route is unavailable.",
